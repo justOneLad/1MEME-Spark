@@ -4,14 +4,16 @@ Chain: BNB Smart Chain (BSC) mainnet, chain ID `56`.
 
 ## Active contracts
 
+All verified on BscScan (source + ABI match on-chain bytecode exactly).
+
 | Contract | Address | Deployed block | Deploy tx |
 |---|---|---|---|
-| `SparkToken` (implementation) | [`0x03270BCd524071581dAB48f31E3152282801B9a9`](https://bscscan.com/address/0x03270BCd524071581dAB48f31E3152282801B9a9) | 113277601 | [`0x22089b...5966d`](https://bscscan.com/tx/0x22089bcafed4ff46927ae09f5f7d9a9ec61ee98ed87bf77bc0de637a4535966d) |
-| `SparkLocker` | [`0x01245e814bbc3A1DC3b24924FB0E4E3b6863105B`](https://bscscan.com/address/0x01245e814bbc3A1DC3b24924FB0E4E3b6863105B) | 113277603 | [`0xdff353...49ac3`](https://bscscan.com/tx/0xdff35367fd6df5a9f9cfbf10314c1b36f234bb0d5044de8578f60822fe249ac3) |
-| `SparkLauncherV2` | [`0xcD5B9F286cd5A2cE2fBe160bAfc018a1159d5c77`](https://bscscan.com/address/0xcD5B9F286cd5A2cE2fBe160bAfc018a1159d5c77) | 113277608 | [`0x9b0514...36c5a`](https://bscscan.com/tx/0x9b05141d8b5b06dc1821dd3acd012c5c4b5892a9e0b59dbe6c26ece2cf436c5a) |
-| `SparkHookV4` | [`0x8baB0D3049B6d5D17B36d3263786Fe587A9D00C4`](https://bscscan.com/address/0x8baB0D3049B6d5D17B36d3263786Fe587A9D00C4) | 113278869 | [`0xb08460...67923`](https://bscscan.com/tx/0xb08460dfbf49ac73d8cb6b0284b1f476b1d4fea4e654e0020d9320f4e9467923) |
-| `SparkHookInfinity` | [`0xad220d84F318Ca4941D07af5AF244f081Cb849A8`](https://bscscan.com/address/0xad220d84F318Ca4941D07af5AF244f081Cb849A8) | 113278027 | [`0x6145d1...889ce`](https://bscscan.com/tx/0x6145d1ae90884ed336bfd0df7149517434cd9a4cb53c92b02e3006b46d2889ce) |
-| `SparkBurner` | [`0x34480Bcd62D0bed99E2782cCAaF90c31A7fB475E`](https://bscscan.com/address/0x34480Bcd62D0bed99E2782cCAaF90c31A7fB475E) | 113278035 | [`0xff909d...9606b0`](https://bscscan.com/tx/0xff909dcd0b5d5f80bf42a91fd5f338fef91823b0ecd3c6ce0c377ccd9ea606b0) |
+| `SparkToken` (implementation) | [`0x03270BCd524071581dAB48f31E3152282801B9a9`](https://bscscan.com/address/0x03270BCd524071581dAB48f31E3152282801B9a9#code) | 113277601 | [`0x22089b...5966d`](https://bscscan.com/tx/0x22089bcafed4ff46927ae09f5f7d9a9ec61ee98ed87bf77bc0de637a4535966d) |
+| `SparkLocker` | [`0x01245e814bbc3A1DC3b24924FB0E4E3b6863105B`](https://bscscan.com/address/0x01245e814bbc3A1DC3b24924FB0E4E3b6863105B#code) | 113277603 | [`0xdff353...49ac3`](https://bscscan.com/tx/0xdff35367fd6df5a9f9cfbf10314c1b36f234bb0d5044de8578f60822fe249ac3) |
+| `SparkLauncherV2` | [`0xcD5B9F286cd5A2cE2fBe160bAfc018a1159d5c77`](https://bscscan.com/address/0xcD5B9F286cd5A2cE2fBe160bAfc018a1159d5c77#code) | 113277608 | [`0x9b0514...36c5a`](https://bscscan.com/tx/0x9b05141d8b5b06dc1821dd3acd012c5c4b5892a9e0b59dbe6c26ece2cf436c5a) |
+| `SparkHookV4` | [`0x8baB0D3049B6d5D17B36d3263786Fe587A9D00C4`](https://bscscan.com/address/0x8baB0D3049B6d5D17B36d3263786Fe587A9D00C4#code) | 113278869 | [`0xb08460...67923`](https://bscscan.com/tx/0xb08460dfbf49ac73d8cb6b0284b1f476b1d4fea4e654e0020d9320f4e9467923) |
+| `SparkHookInfinity` | [`0xad220d84F318Ca4941D07af5AF244f081Cb849A8`](https://bscscan.com/address/0xad220d84F318Ca4941D07af5AF244f081Cb849A8#code) | 113278027 | [`0x6145d1...889ce`](https://bscscan.com/tx/0x6145d1ae90884ed336bfd0df7149517434cd9a4cb53c92b02e3006b46d2889ce) |
+| `SparkBurner` | [`0x34480Bcd62D0bed99E2782cCAaF90c31A7fB475E`](https://bscscan.com/address/0x34480Bcd62D0bed99E2782cCAaF90c31A7fB475E#code) | 113278035 | [`0xff909d...9606b0`](https://bscscan.com/tx/0xff909dcd0b5d5f80bf42a91fd5f338fef91823b0ecd3c6ce0c377ccd9ea606b0) |
 
 `SparkHookV4` was deployed via a one-time helper factory (below) rather than directly, so that
 ownership could be transferred atomically in the same transaction — see *Deprecated / abandoned*
@@ -19,7 +21,11 @@ for why.
 
 | Helper (one-time use, not part of the ongoing system) | Address | Deployed block | Deploy tx |
 |---|---|---|---|
-| `HookV4Factory` | [`0xF5eAD4a17Ce34a99a1F0f0C67C5d4DF2f6500229`](https://bscscan.com/address/0xF5eAD4a17Ce34a99a1F0f0C67C5d4DF2f6500229) | 113278865 | [`0xc8cef9...5728f`](https://bscscan.com/tx/0xc8cef9f2a02a32a4652f71f85d2e41be2dc3c6547809f9d052b57034f7b5728f) |
+| `HookV4Factory` | [`0xF5eAD4a17Ce34a99a1F0f0C67C5d4DF2f6500229`](https://bscscan.com/address/0xF5eAD4a17Ce34a99a1F0f0C67C5d4DF2f6500229#code) | 113278865 | [`0xc8cef9...5728f`](https://bscscan.com/tx/0xc8cef9f2a02a32a4652f71f85d2e41be2dc3c6547809f9d052b57034f7b5728f) |
+
+Verified via `forge verify-contract` against the Etherscan V2 unified API (`--chain 56`), which
+worked even for `SparkHookV4` despite it being created by an internal CREATE2 call from
+`HookV4Factory` rather than a top-level deployment transaction.
 
 ## Configuration transactions
 

@@ -62,8 +62,7 @@ contract SparkLocker {
     error NoCTOApplication();
 
     uint256 public creatorBps  = 7_000;
-    uint256 public platformBps = 2_500;
-    uint256 public charityBps  =   500;
+    uint256 public platformBps = 3_000;
     uint256 private constant BPS = 10_000;
 
     struct Position {
@@ -88,7 +87,6 @@ contract SparkLocker {
     address public owner;
     address public launcher;
     address public platformWallet;
-    address public charityWallet;
 
     mapping(address => Position) public positions;
     address[] public allTokens;
@@ -106,14 +104,11 @@ contract SparkLocker {
         uint256 creator0,
         uint256 creator1,
         uint256 platform0,
-        uint256 platform1,
-        uint256 charity0,
-        uint256 charity1
+        uint256 platform1
     );
     event LauncherSet(address indexed launcher);
     event PlatformWalletSet(address indexed wallet);
-    event CharityWalletSet(address indexed wallet);
-    event FeeBpsUpdated(uint256 creatorBps, uint256 platformBps, uint256 charityBps);
+    event FeeBpsUpdated(uint256 creatorBps, uint256 platformBps);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event CTOFeeSet(uint256 fee);
     event CTOFeeWalletSet(address indexed wallet);
@@ -124,12 +119,10 @@ contract SparkLocker {
     modifier onlyOwner()    { if (msg.sender != owner)    revert NotOwner();    _; }
     modifier onlyLauncher() { if (msg.sender != launcher) revert NotLauncher(); _; }
 
-    constructor(address platformWallet_, address charityWallet_) {
+    constructor(address platformWallet_) {
         if (platformWallet_ == address(0)) revert ZeroAddress();
-        if (charityWallet_  == address(0)) revert ZeroAddress();
         owner          = msg.sender;
         platformWallet = platformWallet_;
-        charityWallet  = charityWallet_;
     }
 
     function setLauncher(address launcher_) external onlyOwner {
@@ -144,20 +137,13 @@ contract SparkLocker {
         emit PlatformWalletSet(wallet);
     }
 
-    function setCharityWallet(address wallet) external onlyOwner {
-        if (wallet == address(0)) revert ZeroAddress();
-        charityWallet = wallet;
-        emit CharityWalletSet(wallet);
-    }
-
-    function setFeeBps(uint256 creator_, uint256 platform_, uint256 charity_)
+    function setFeeBps(uint256 creator_, uint256 platform_)
         external onlyOwner
     {
-        if (creator_ + platform_ + charity_ != BPS) revert InvalidBps();
+        if (creator_ + platform_ != BPS) revert InvalidBps();
         creatorBps  = creator_;
         platformBps = platform_;
-        charityBps  = charity_;
-        emit FeeBpsUpdated(creator_, platform_, charity_);
+        emit FeeBpsUpdated(creator_, platform_);
     }
 
     function transferOwnership(address newOwner) external onlyOwner {
@@ -327,29 +313,23 @@ contract SparkLocker {
 
         uint256 creator0;  uint256 creator1;
         uint256 platform0; uint256 platform1;
-        uint256 charity0;  uint256 charity1;
 
         uint256 cBps = creatorBps;
-        uint256 chBps = charityBps;
 
         if (a0 > 0) {
-            creator0  = a0 * cBps  / BPS;
-            charity0  = a0 * chBps / BPS;
-            platform0 = a0 - creator0 - charity0;
+            creator0  = a0 * cBps / BPS;
+            platform0 = a0 - creator0;
             _safeTransfer(pos.token0, pos.feeWallet,  creator0);
             _safeTransfer(pos.token0, platformWallet, platform0);
-            _safeTransfer(pos.token0, charityWallet,  charity0);
         }
         if (a1 > 0) {
-            creator1  = a1 * cBps  / BPS;
-            charity1  = a1 * chBps / BPS;
-            platform1 = a1 - creator1 - charity1;
+            creator1  = a1 * cBps / BPS;
+            platform1 = a1 - creator1;
             _safeTransfer(pos.token1, pos.feeWallet,  creator1);
             _safeTransfer(pos.token1, platformWallet, platform1);
-            _safeTransfer(pos.token1, charityWallet,  charity1);
         }
 
-        emit FeesClaimed(token, pos.feeWallet, creator0, creator1, platform0, platform1, charity0, charity1);
+        emit FeesClaimed(token, pos.feeWallet, creator0, creator1, platform0, platform1);
     }
 
     function _safeTransfer(address token, address to, uint256 amount) private {

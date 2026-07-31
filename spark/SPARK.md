@@ -10,7 +10,7 @@ Spark lets anyone deploy a meme token and seed permanent one-sided V3 liquidity 
 |------|----------|------|
 | `SparkToken.sol` | `SparkToken` | ERC-20 + EIP-2612 implementation used as the EIP-1167 clone template |
 | `SparkLauncher.sol` | `SparkLauncher` | Orchestrates every launch — clones token, creates pool, seeds one-sided liquidity |
-| `SparkLocker.sol` | `SparkLocker` | Permanent LP-NFT vault; distributes swap fees to creator, platform, and charity |
+| `SparkLocker.sol` | `SparkLocker` | Permanent LP-NFT vault; distributes swap fees to creator and platform |
 
 ---
 
@@ -38,7 +38,7 @@ SparkLauncher
   └─ transfer(remaining mint-rounding dust → creator)
 
 SparkLocker  (holds LP NFTs forever)
-  └─ claimFees(token)  →  70% feeWallet  +  25% platformWallet  +  5% charityWallet
+  └─ claimFees(token)  →  70% feeWallet  +  30% platformWallet
 ```
 
 The quote token is purely the pool's pairing partner — the creator never sends or approves
@@ -166,15 +166,14 @@ fee is not refunded). Applying alone changes nothing; only `approveCTO` actually
 
 ### Fee split
 
-Default values — updatable by the locker owner via `setFeeBps(creator, platform, charity)`. The three values must sum to exactly 10 000.
+Default values — updatable by the locker owner via `setFeeBps(creator, platform)`. The two values must sum to exactly 10 000.
 
 | Recipient | Default share | Interaction |
 |-----------|--------------|-------------|
 | Creator fee wallet | 70 % (7 000 bps) | Initiates `claimFees` |
-| Platform wallet | 25 % (2 500 bps) | Passive recipient |
-| Charity wallet | 5 % (500 bps) | Passive recipient |
+| Platform wallet | 30 % (3 000 bps) | Passive recipient |
 
-Fees are distributed atomically. Platform receives the remainder after creator and charity to absorb rounding dust.
+Fees are distributed atomically. Platform receives the remainder after creator to absorb rounding dust.
 
 ### Pending fee view
 
@@ -204,8 +203,7 @@ Each launched token is an EIP-1167 clone of the `SparkToken` implementation cont
 
 ```solidity
 constructor(
-    address platformWallet_,  // Receives 25 % of claimed swap fees (default)
-    address charityWallet_    // Receives  5 % of claimed swap fees (default); passive only
+    address platformWallet_   // Receives 30 % of claimed swap fees (default)
 )
 ```
 
@@ -229,7 +227,7 @@ constructor(
 ## Deployment Order
 
 1. Deploy `SparkToken` implementation (no constructor args)
-2. Deploy `SparkLocker(platformWallet, charityWallet)`
+2. Deploy `SparkLocker(platformWallet)`
 3. Deploy `SparkLauncher(weth, tokenImpl, locker, launchFeeWallet, factory, positionMgr, router, launchFee)`
 4. Call `SparkLocker.setLauncher(sparkLauncher)`
 5. Call `SparkLauncher.addDex(...)` for each additional DEX
@@ -266,8 +264,7 @@ constructor(
 |----------|-------------|
 | `setLauncher(launcher)` | Set the address authorised to call `registerPosition` |
 | `setPlatformWallet(wallet)` | Update platform fee recipient |
-| `setCharityWallet(wallet)` | Update charity fee recipient |
-| `setFeeBps(creator, platform, charity)` | Update fee split; must sum to 10 000 |
+| `setFeeBps(creator, platform)` | Update fee split; must sum to 10 000 |
 | `claimAllFees()` | Sweep all positions; skips failures |
 | `claimFeesRange(from, to)` | Paginated sweep of `allTokens[from..to)` |
 | `transferOwnership(newOwner)` | Transfer locker admin |

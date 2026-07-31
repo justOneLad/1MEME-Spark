@@ -11,7 +11,7 @@ flow, and function reference.
 |------|----------|------|
 | `spark/SparkToken.sol` | `SparkToken` | ERC-20 + EIP-2612 implementation used as the EIP-1167 clone template |
 | `spark/SparkLauncher.sol` | `SparkLauncher` | v3-style launcher — clones token, creates a pool, seeds one-sided liquidity |
-| `spark/SparkLocker.sol` | `SparkLocker` | Permanent LP-NFT vault for `SparkLauncher`; distributes swap fees to creator, platform, and charity |
+| `spark/SparkLocker.sol` | `SparkLocker` | Permanent LP-NFT vault for `SparkLauncher`; distributes swap fees to creator and platform |
 | `spark-v2/SparkLauncherV2.sol` | `SparkLauncherV2` | BNB-only meme launcher for Uniswap v4 and PancakeSwap Infinity (CL pools) on BNB Smart Chain |
 | `spark-v2/hooks/SparkHookV4.sol` | `SparkHookV4` | Optional v4 hook — anti-sandwich, max-buy/max-wallet, and a 2% sell-side swap fee, paid entirely in native BNB |
 | `spark-v2/hooks/SparkHookInfinity.sol` | `SparkHookInfinity` | Same protections as `SparkHookV4`, for PancakeSwap Infinity CL pools |

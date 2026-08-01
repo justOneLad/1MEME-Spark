@@ -71,6 +71,34 @@ interface ISwapRouter {
         address tokenOut;
         uint24  fee;
         address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
+    function exactInputSingle(ExactInputSingleParams calldata params)
+        external payable returns (uint256 amountOut);
+
+    struct ExactInputParams {
+        bytes   path;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+    }
+    function exactInput(ExactInputParams calldata params)
+        external payable returns (uint256 amountOut);
+}
+
+// Uniswap's SwapRouter02 (IV3SwapRouter) dropped `deadline` from these structs; PancakeSwap's
+// SwapRouter/SmartRouter kept the original ISwapRouter shape with `deadline` included. The two
+// are not ABI-compatible, so each registered DEX records which shape its router expects.
+interface IV3SwapRouterNoDeadline {
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint24  fee;
+        address recipient;
         uint256 amountIn;
         uint256 amountOutMinimum;
         uint160 sqrtPriceLimitX96;
@@ -101,6 +129,9 @@ contract SparkLauncher {
     error TransferFailed();
     error ApprovalFailed();
     error InvalidTickRange();
+    error VanityMismatch();
+
+    uint16 public constant VANITY_SUFFIX = 0x1111;
 
     uint256 public constant TOTAL_SUPPLY = 1_000_000_000e18;
 
@@ -112,6 +143,7 @@ contract SparkLauncher {
     struct DexConfig {
         address positionManager;
         address router;
+        bool    routerNoDeadline; // true for Uniswap SwapRouter02-style routers (no `deadline` field)
         bool    enabled;
     }
 
@@ -140,7 +172,7 @@ contract SparkLauncher {
         address         pool,
         uint256         tokenId
     );
-    event DexAdded(address indexed factory, address positionManager, address router);
+    event DexAdded(address indexed factory, address positionManager, address router, bool routerNoDeadline);
     event DexDisabled(address indexed factory);
     event QuoteTokenAdded(address indexed token, uint256 marketCapRef, uint24 wethPairFee);
     event QuoteTokenDisabled(address indexed token);
@@ -160,6 +192,7 @@ contract SparkLauncher {
         address initialFactory_,
         address initialPositionMgr_,
         address initialRouter_,
+        bool    initialRouterNoDeadline_,
         uint256 launchFee_
     ) {
         if (weth_               == address(0)) revert ZeroAddress();
@@ -180,9 +213,10 @@ contract SparkLauncher {
         dexes[initialFactory_] = DexConfig({
             positionManager: initialPositionMgr_,
             router:          initialRouter_,
+            routerNoDeadline: initialRouterNoDeadline_,
             enabled:         true
         });
-        emit DexAdded(initialFactory_, initialPositionMgr_, initialRouter_);
+        emit DexAdded(initialFactory_, initialPositionMgr_, initialRouter_, initialRouterNoDeadline_);
 
         quoteTokens[weth_] = QuoteToken({
             marketCapRef: 5e18,
@@ -218,16 +252,17 @@ contract SparkLauncher {
         emit MarketCapRefSet(token_, ref_);
     }
 
-    function addDex(address factory_, address positionMgr_, address router_) external onlyOwner {
+    function addDex(address factory_, address positionMgr_, address router_, bool routerNoDeadline_) external onlyOwner {
         if (factory_     == address(0)) revert ZeroAddress();
         if (positionMgr_ == address(0)) revert ZeroAddress();
         if (router_      == address(0)) revert ZeroAddress();
         dexes[factory_] = DexConfig({
             positionManager: positionMgr_,
             router:          router_,
+            routerNoDeadline: routerNoDeadline_,
             enabled:         true
         });
-        emit DexAdded(factory_, positionMgr_, router_);
+        emit DexAdded(factory_, positionMgr_, router_, routerNoDeadline_);
     }
 
     function disableDex(address factory_) external onlyOwner {
@@ -280,9 +315,10 @@ contract SparkLauncher {
         string calldata metaURI_,
         address         feeWallet_,
         address         factory_,
-        address         quoteToken_
+        address         quoteToken_,
+        bytes32         vanitySalt_
     ) external payable returns (address token, address pool, uint256 tokenId) {
-        token = _deployAndInit(name_, symbol_, metaURI_);
+        token = _deployAndInit(name_, symbol_, metaURI_, vanitySalt_);
         (pool, tokenId) = _setupAndRegister(token, feeWallet_, factory_, quoteToken_);
     }
 
@@ -327,7 +363,12 @@ contract SparkLauncher {
         );
 
         if (extraEth > 0) {
-            _doInstantBuy(dexes[factory_].router, quoteToken_, token, extraEth, quoteTokens[quoteToken_].wethPairFee);
+            _doInstantBuy(
+                dexes[factory_].router,
+                dexes[factory_].routerNoDeadline,
+                quoteToken_, token, extraEth,
+                quoteTokens[quoteToken_].wethPairFee
+            );
         }
 
         uint256 creatorTokens = ISparkToken(token).balanceOf(address(this));
@@ -346,6 +387,7 @@ contract SparkLauncher {
 
     function _doInstantBuy(
         address router_,
+        bool    routerNoDeadline_,
         address quoteToken_,
         address token,
         uint256 extraEth,
@@ -354,23 +396,48 @@ contract SparkLauncher {
         IWETH(weth).deposit{value: extraEth}();
         _safeApprove(weth, router_, extraEth);
 
-        if (quoteToken_ == weth) {
-            ISwapRouter(router_).exactInputSingle(ISwapRouter.ExactInputSingleParams({
-                tokenIn:           weth,
-                tokenOut:          token,
-                fee:               FEE_TIER,
-                recipient:         msg.sender,
-                amountIn:          extraEth,
-                amountOutMinimum:  0,
-                sqrtPriceLimitX96: 0
-            }));
+        bytes memory path = abi.encodePacked(weth, wethPairFee, quoteToken_, FEE_TIER, token);
+
+        if (routerNoDeadline_) {
+            if (quoteToken_ == weth) {
+                IV3SwapRouterNoDeadline(router_).exactInputSingle(IV3SwapRouterNoDeadline.ExactInputSingleParams({
+                    tokenIn:           weth,
+                    tokenOut:          token,
+                    fee:               FEE_TIER,
+                    recipient:         msg.sender,
+                    amountIn:          extraEth,
+                    amountOutMinimum:  0,
+                    sqrtPriceLimitX96: 0
+                }));
+            } else {
+                IV3SwapRouterNoDeadline(router_).exactInput(IV3SwapRouterNoDeadline.ExactInputParams({
+                    path:             path,
+                    recipient:        msg.sender,
+                    amountIn:         extraEth,
+                    amountOutMinimum: 0
+                }));
+            }
         } else {
-            ISwapRouter(router_).exactInput(ISwapRouter.ExactInputParams({
-                path:             abi.encodePacked(weth, wethPairFee, quoteToken_, FEE_TIER, token),
-                recipient:        msg.sender,
-                amountIn:         extraEth,
-                amountOutMinimum: 0
-            }));
+            if (quoteToken_ == weth) {
+                ISwapRouter(router_).exactInputSingle(ISwapRouter.ExactInputSingleParams({
+                    tokenIn:           weth,
+                    tokenOut:          token,
+                    fee:               FEE_TIER,
+                    recipient:         msg.sender,
+                    deadline:          block.timestamp,
+                    amountIn:          extraEth,
+                    amountOutMinimum:  0,
+                    sqrtPriceLimitX96: 0
+                }));
+            } else {
+                ISwapRouter(router_).exactInput(ISwapRouter.ExactInputParams({
+                    path:             path,
+                    recipient:        msg.sender,
+                    deadline:         block.timestamp,
+                    amountIn:         extraEth,
+                    amountOutMinimum: 0
+                }));
+            }
         }
     }
 
@@ -429,10 +496,12 @@ contract SparkLauncher {
     function _deployAndInit(
         string calldata name_,
         string calldata symbol_,
-        string calldata metaURI_
+        string calldata metaURI_,
+        bytes32         vanitySalt_
     ) private returns (address token) {
-        bytes32 salt = keccak256(abi.encodePacked(msg.sender, block.timestamp, name_, symbol_, metaURI_));
+        bytes32 salt = keccak256(abi.encode(msg.sender, vanitySalt_));
         token = _clone(tokenImpl, salt);
+        if (uint16(uint160(token)) != VANITY_SUFFIX) revert VanityMismatch();
         ISparkToken(token).initSpark(name_, symbol_, metaURI_, address(this));
     }
 

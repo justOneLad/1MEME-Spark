@@ -77,23 +77,3 @@ implementations.
 | — | TSLA (Ondo Tokenized) | `0x2494b603319d4D9F9715c9f4496d9E0364B59d93` |
 | — | SPCX (Ondo Tokenized) | `0xd0a58BC9D88D3FF48C0294Cb7e45937d0E41A928` |
 
-## Reproducing this deployment
-
-Scripts live in [`deploy/`](deploy/) (a separate Foundry project;
-`forge install OpenZeppelin/openzeppelin-contracts-upgradeable` needed before
-building). `deploy/test/` has a fork-test suite (`vm.createSelectFork`
-against live BSC state, not testnet) — 13/13 passing.
-
-```
-./deploy-all.sh <private-key> [rpc-url]   # runs both scripts, --skip-simulation baked in
-```
-
-Most public/shared BSC RPC endpoints (`bsc-dataseed.binance.org`,
-`bsc.publicnode.com`, GetBlock's shared tier) can't complete a `--broadcast`
-run — `forge script` always simulates once successfully, then fails a second
-on-chain verification pass with "missing trie node" / archive-request errors.
-`--skip-simulation` (broadcast directly from the first pass) fixes it;
-`binance.nodereal.io` has proven reliable end-to-end. Some free tiers also
-gate `eth_getTransactionReceipt` mid-sequence even after a transaction
-succeeds — verify on-chain state directly (`cast call`) before assuming a
-failure report means a transaction didn't land.

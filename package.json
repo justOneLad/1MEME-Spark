@@ -6,6 +6,8 @@
     "compile:verbose": "node compile.js --verbose"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^5.7.0",
+    "@openzeppelin/contracts-upgradeable": "^5.7.0",
     "solc": "^0.8.32"
   }
 }

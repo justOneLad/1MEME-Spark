@@ -10,7 +10,10 @@ fs_permissions = [{ access = "read", path = "../" }]
 allow_paths = ["../"]
 remappings = [
   "spark-contracts/=../spark/",
-  "spark-v2-contracts/=../spark-v2/",
+  "spark-go-contracts/=../spark-go/",
+  "common-contracts/=../common/",
+  "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/",
 ]
 
 [rpc_endpoints]

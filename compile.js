@@ -5,7 +5,15 @@
  * Uses the solc Node API with viaIR:true (required — contracts exceed the
  * EVM's 16-slot stack limit under legacy codegen).
  *
- * Outputs: out/<Contract>.abi  and  out/<Contract>.bin
+ * Resolves imports via a findImportCallback: `@openzeppelin/...` imports read
+ * from node_modules/@openzeppelin/...; everything else is read relative to
+ * the repo root (plain relative imports like "../common/SparkRouting.sol"
+ * need no extra configuration — solc normalizes them against the importing
+ * file's own path before calling the callback).
+ *
+ * Outputs: out/<Contract>.abi  and  out/<Contract>.bin  — one pair per
+ * contract encountered anywhere in the compilation graph, not just the entry
+ * files below (so common/SparkRouting.sol, e.g., also gets emitted).
  *
  * Usage:
  *   node compile.js            — compile all contracts
@@ -20,22 +28,23 @@ const path = require('path');
 
 const VERBOSE = process.argv.includes('--verbose');
 const OUT_DIR = path.join(__dirname, 'out');
+const NODE_MODULES = path.join(__dirname, 'node_modules');
 
-// ── Source files to compile ──────────────────────────────────────────────────
-const CONTRACT_FILES = [
+// ── Entry-point source files to compile ─────────────────────────────────────
+const ENTRY_FILES = [
   'spark/SparkToken.sol',
-  'spark/SparkLauncher.sol',
   'spark/SparkLocker.sol',
-  'spark-v2/SparkLauncherV2.sol',
-  'spark-v2/SparkBurner.sol',
-  'spark-v2/hooks/SparkHookV4.sol',
-  'spark-v2/hooks/SparkHookInfinity.sol',
+  'spark/SparkLauncherUpgradeable.sol',
+  'spark-go/SparkGoLauncher.sol',
+  'spark-go/SparkGoBurner.sol',
+  'spark-go/hooks/SparkGoHookV4.sol',
+  'spark-go/hooks/SparkGoHookInfinity.sol',
 ];
 
-// ── Build source map ─────────────────────────────────────────────────────────
+// ── Build source map (entry files only — imports resolved lazily below) ────
 const sources = {};
 let missing = false;
-for (const f of CONTRACT_FILES) {
+for (const f of ENTRY_FILES) {
   const abs = path.join(__dirname, f);
   if (!fs.existsSync(abs)) {
     console.error('✗ Missing:', f);
@@ -46,25 +55,32 @@ for (const f of CONTRACT_FILES) {
 }
 if (missing) process.exit(1);
 
-// ── Compiler input ───────────────────────────────────────────────────────────
-const outputSelection = {};
-for (const f of CONTRACT_FILES) {
-  outputSelection[f] = { '*': ['abi', 'evm.bytecode.object'] };
+// ── Import resolution ────────────────────────────────────────────────────────
+function findImports(importPath) {
+  const abs = importPath.startsWith('@openzeppelin/')
+    ? path.join(NODE_MODULES, importPath)
+    : path.join(__dirname, importPath);
+  try {
+    return { contents: fs.readFileSync(abs, 'utf8') };
+  } catch {
+    return { error: `File not found: ${importPath}` };
+  }
 }
 
+// ── Compiler input ───────────────────────────────────────────────────────────
 const compilerInput = JSON.stringify({
   language: 'Solidity',
   sources,
   settings: {
     optimizer: { enabled: true, runs: 200 },
     viaIR: true,
-    outputSelection,
+    outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object'] } },
   },
 });
 
 // ── Compile ──────────────────────────────────────────────────────────────────
 console.log('Compiling with solc', solc.version(), '(viaIR: true, optimizer: 200 runs)…');
-const output = JSON.parse(solc.compile(compilerInput));
+const output = JSON.parse(solc.compile(compilerInput, { import: findImports }));
 
 // ── Report errors / warnings ─────────────────────────────────────────────────
 const errors   = (output.errors || []).filter(e => e.severity === 'error');
@@ -82,14 +98,29 @@ if (VERBOSE && warnings.length) {
 }
 
 // ── Write artifacts ──────────────────────────────────────────────────────────
+// Contract/interface names aren't unique across files (e.g. ISwapRouter is
+// declared in multiple sources) — Foundry disambiguates by keying on
+// {path}:{name}, but a flat out/<Name>.abi namespace can't. Pre-scan for
+// collisions; only the colliding names get qualified with their source
+// file's basename, so the common case still gets plain out/<Name>.abi files.
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
+const sourcesByName = {};
+for (const file of Object.keys(output.contracts || {})) {
+  for (const name of Object.keys(output.contracts[file])) {
+    (sourcesByName[name] ||= []).push(file);
+  }
+}
+
 let count = 0;
-for (const file of CONTRACT_FILES) {
-  const contracts = output.contracts[file] || {};
+for (const file of Object.keys(output.contracts || {})) {
+  const contracts = output.contracts[file];
   for (const [name, artifact] of Object.entries(contracts)) {
-    fs.writeFileSync(path.join(OUT_DIR, `${name}.abi`), JSON.stringify(artifact.abi, null, 2));
-    fs.writeFileSync(path.join(OUT_DIR, `${name}.bin`), artifact.evm.bytecode.object);
+    const colliding = sourcesByName[name].length > 1;
+    const base = colliding ? `${path.basename(file, '.sol')}.${name}` : name;
+    if (colliding) console.warn(`⚠ ${name} defined in multiple files — writing as ${base}.abi/.bin`);
+    fs.writeFileSync(path.join(OUT_DIR, `${base}.abi`), JSON.stringify(artifact.abi, null, 2));
+    fs.writeFileSync(path.join(OUT_DIR, `${base}.bin`), artifact.evm.bytecode.object);
     count++;
   }
 }

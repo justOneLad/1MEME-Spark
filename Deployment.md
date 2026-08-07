@@ -28,8 +28,8 @@ verified on the relevant explorer, proxies linked to their implementations.
 - `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
 - DEXs: PancakeSwap V3 (Factory `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865`, SmartRouter `0x13f4EA83D0bd40E75C8222255bc855a974568Dd4`) and Uniswap V3 (Factory `0xdB1d10011AD0Ff90774D0C6Bb92e5C5c8b4461F7`, SwapRouter02 `0xB971eF87ede563556b2ED4b1C0b0019111Dd85d2`), both `routerNoDeadline: true`
 - `launchFee`: `0.001111 ether`
-- Quote tokens (`marketCapRef`, all 18-decimal): WBNB `5e18` · USDT/USDC/USD1 `2000e18` each · AAPL `6.629e18` · NVDA `10.066e18` · TSLA `4.788e18` · SPCX `18.349e18` (all ≈$2,000 launch market cap)
-- Routes: single-hop PancakeSwap for stables, multi-hop (WBNB→USDT→stock) for AAPL/NVDA/TSLA, cross-DEX chained (PancakeSwap WBNB→USDT, Uniswap USDT→SPCX) for SPCX
+- Quote tokens (`marketCapRef`, all 18-decimal): WBNB `3.373e18` (≈$2,000) · USDT/USDC/USD1 `2000e18` each · AAPL `6.629e18` · NVDA `10.066e18` · TSLA `4.788e18` · SPCX `18.349e18` (all ≈$2,000 launch market cap) · 1COIN (`0xe43eF1fE041Ba9E8da87E8C5bFD583B3b46A1111`) `0.0653e18` (≈$1,500)
+- Routes: single-hop PancakeSwap for stables, multi-hop (WBNB→USDT→stock) for AAPL/NVDA/TSLA, cross-DEX chained (PancakeSwap WBNB→USDT, Uniswap USDT→SPCX) for SPCX, single-hop PancakeSwap V2 for 1COIN (its only liquidity — a thin pool, since 1COIN's total supply is 1 token; instant-buy through it hits slippage limits fast)
 
 ### SparkGo
 
@@ -45,7 +45,7 @@ verified on the relevant explorer, proxies linked to their implementations.
 - `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
 - DEXs: Uniswap v4 → `SparkGoHookV4`, PancakeSwap Infinity → `SparkGoHookInfinity`
 - `launchFee`: `0.001111 ether`, `burner`: `SparkGoBurner` above
-- Quote tokens/routes: same set and values as SparkLauncher above, plus native BNB (`address(0)`, `marketCapRef` `5e18`)
+- Quote tokens/routes: same set and values as SparkLauncher above (including 1COIN), native BNB (`address(0)`, `marketCapRef` `3.373e18`, ≈$2,000)
 
 ### External BSC dependencies
 
@@ -142,3 +142,24 @@ of BSC — and **Ethereum's USDT/USDC use 6 decimals**, not BSC's 18, so
 | — | NVDA (Ondo Tokenized) | `0x2D1F7226Bd1F780AF6B9A49DCC0aE00E8Df4bDEE` |
 | — | TSLA (Ondo Tokenized) | `0xf6b1117ec07684D3958caD8BEb1b302bfD21103f` |
 | — | SPCX (Ondo Tokenized) | `0xc9eef266834730340A55B6CC24621B31BAF55581` |
+
+---
+
+## Distributors
+
+Independent, protocol-agnostic — no relation to any Spark launcher. Live on
+both chains with identical addresses' *behavior* (not the same address; each
+was a separate deploy).
+
+| Contract | BSC | Ethereum |
+|---|---|---|
+| `MultiSender` | [`0xca1D1e81B328fE0977de845c8D5226F84331Ac09`](https://bscscan.com/address/0xca1D1e81B328fE0977de845c8D5226F84331Ac09#code) | [`0x1500CAae3e4E56C680bbd0428749b32a814ea4c7`](https://etherscan.io/address/0x1500CAae3e4E56C680bbd0428749b32a814ea4c7#code) |
+| `MerkleDistributor` (implementation) | [`0x24097aDd152f0614cfE9eb841721d6a7D20A574d`](https://bscscan.com/address/0x24097aDd152f0614cfE9eb841721d6a7D20A574d#code) | [`0x773371fD25a57B503596d361491929250c372890`](https://etherscan.io/address/0x773371fD25a57B503596d361491929250c372890#code) |
+| `MerkleDistributor` (proxy — use this address) | [`0x20ED1b487dd2A172D5ba0ED33562370142Cc338b`](https://bscscan.com/address/0x20ED1b487dd2A172D5ba0ED33562370142Cc338b#code) | [`0xcB3ccF9f74c08A70b2B1bf7c111391d158D18B1c`](https://etherscan.io/address/0xcB3ccF9f74c08A70b2B1bf7c111391d158D18B1c#code) |
+
+`MerkleDistributor`: `owner` `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F` on both chains,
+`campaignFee` `0.001111 ether` (native, charged on every `createCampaign` regardless
+of caller — funds the platform's indexing/API work for surfacing campaigns),
+`feeWallet` unset (defaults to `owner`). Campaign creation is permissionless;
+only a campaign's own `creator` can `sweep` its unclaimed remainder after its
+deadline — the platform's only claim on any campaign is the upfront fee.

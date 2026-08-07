@@ -39,6 +39,8 @@ const ENTRY_FILES = [
   'spark-go/SparkGoBurner.sol',
   'spark-go/hooks/SparkGoHookV4.sol',
   'spark-go/hooks/SparkGoHookInfinity.sol',
+  'distributor/MultiSender.sol',
+  'distributor/MerkleDistributor.sol',
 ];
 
 // ── Build source map (entry files only — imports resolved lazily below) ────

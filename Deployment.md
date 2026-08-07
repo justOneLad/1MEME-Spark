@@ -74,6 +74,7 @@ verified on the relevant explorer, proxies linked to their implementations.
 | — | NVDA (Ondo Tokenized) | `0xA9eE28C80f960B889dFbd1902055218cBa016F75` |
 | — | TSLA (Ondo Tokenized) | `0x2494b603319d4D9F9715c9f4496d9E0364B59d93` |
 | — | SPCX (Ondo Tokenized) | `0xd0a58BC9D88D3FF48C0294Cb7e45937d0E41A928` |
+| — | 1COIN (18 dec, total supply 1 token) | `0xe43eF1fE041Ba9E8da87E8C5bFD583B3b46A1111` |
 
 ---
 

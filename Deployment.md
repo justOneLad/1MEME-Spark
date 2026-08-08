@@ -14,38 +14,41 @@ verified on the relevant explorer, proxies linked to their implementations.
 
 | Contract | Address |
 |---|---|
-| `SparkToken` (implementation, used by both launchers) | [`0x3df1f46498A95215fBdfaF349e9ac3Ac39DeEDbA`](https://bscscan.com/address/0x3df1f46498A95215fBdfaF349e9ac3Ac39DeEDbA#code) |
+| `SparkToken` (implementation, used by both launchers) | [`0xeC2cd8Ad351D3fE8948bF973471ACA2b3987CfAA`](https://bscscan.com/address/0xeC2cd8Ad351D3fE8948bF973471ACA2b3987CfAA#code) |
 | `SparkLocker` (SparkLauncher's) | [`0xA69B4B4003483E7Ca27DDf1bE8cBC7e723afcF86`](https://bscscan.com/address/0xA69B4B4003483E7Ca27DDf1bE8cBC7e723afcF86#code) |
 | `SparkLocker` (SparkGo's) | [`0x01245e814bbc3A1DC3b24924FB0E4E3b6863105B`](https://bscscan.com/address/0x01245e814bbc3A1DC3b24924FB0E4E3b6863105B#code) |
+
+`SparkToken` antibot: max wallet 3% of supply for 30 minutes after launch, unrestricted after.
 
 ### SparkLauncher
 
 | Contract | Address |
 |---|---|
-| Implementation | [`0xE4dD59Fb5b78a5f92fCf4A42154f582A18b4f1f0`](https://bscscan.com/address/0xE4dD59Fb5b78a5f92fCf4A42154f582A18b4f1f0#code) |
+| Implementation | [`0x26aB192d831056b52B730c8e1665568DED571524`](https://bscscan.com/address/0x26aB192d831056b52B730c8e1665568DED571524#code) |
 | **Proxy — use this address** | [`0xC10b8647B7d0d88B77C0A9FfAD5C7C17564B1973`](https://bscscan.com/address/0xC10b8647B7d0d88B77C0A9FfAD5C7C17564B1973#code) |
 
 - `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
 - DEXs: PancakeSwap V3 (Factory `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865`, SmartRouter `0x13f4EA83D0bd40E75C8222255bc855a974568Dd4`) and Uniswap V3 (Factory `0xdB1d10011AD0Ff90774D0C6Bb92e5C5c8b4461F7`, SwapRouter02 `0xB971eF87ede563556b2ED4b1C0b0019111Dd85d2`), both `routerNoDeadline: true`
 - `launchFee`: `0.001111 ether`
-- Quote tokens (`marketCapRef`, all 18-decimal): WBNB `3.373e18` (≈$2,000) · USDT/USDC/USD1 `2000e18` each · AAPL `6.629e18` · NVDA `10.066e18` · TSLA `4.788e18` · SPCX `18.349e18` (all ≈$2,000 launch market cap) · 1COIN (`0xe43eF1fE041Ba9E8da87E8C5bFD583B3b46A1111`) `0.0653e18` (≈$1,500)
-- Routes: single-hop PancakeSwap for stables, multi-hop (WBNB→USDT→stock) for AAPL/NVDA/TSLA, cross-DEX chained (PancakeSwap WBNB→USDT, Uniswap USDT→SPCX) for SPCX, single-hop PancakeSwap V2 for 1COIN (its only liquidity — a thin pool, since 1COIN's total supply is 1 token; instant-buy through it hits slippage limits fast)
+- Quote tokens (`marketCapRef`, all 18-decimal): WBNB `3.373e18` (≈$2,000) · USDT/USDC/USD1 `2000e18` each · AAPLB `6.395e18` · NVDAB `8.956e18` · TSLAB `6.071e18` · SPCXB `14.986e18` (all ≈$2,000 launch market cap, Binance bStocks) · 1COIN (`0xe43eF1fE041Ba9E8da87E8C5bFD583B3b46A1111`) `0.0653e18` (≈$1,500)
+- Routes: single-hop PancakeSwap for stables, two-route fallback (PancakeSwap V3 primary, Uniswap V3 fallback) for AAPLB/NVDAB/SPCXB, PancakeSwap-only for TSLAB (no Uniswap liquidity), single-hop PancakeSwap V2 for 1COIN (its only liquidity — a thin pool, since 1COIN's total supply is 1 token; instant-buy through it hits slippage limits fast)
 
 ### SparkGo
 
 | Contract | Address |
 |---|---|
-| Implementation | [`0x8AE5052A18439D7120124AB1356b5A1cD19606A8`](https://bscscan.com/address/0x8AE5052A18439D7120124AB1356b5A1cD19606A8#code) |
+| Implementation | [`0xDD5871DC938dE998a89b96A69cF633347f93F1B8`](https://bscscan.com/address/0xDD5871DC938dE998a89b96A69cF633347f93F1B8#code) |
 | **Proxy — use this address** | [`0xC0d33846D04F5Ce0a34AEecE9b6462433EBC8f7C`](https://bscscan.com/address/0xC0d33846D04F5Ce0a34AEecE9b6462433EBC8f7C#code) |
-| `SparkGoHookV4` | [`0xdF3f8b41a55fb8737D653d6bc7467095e48700c4`](https://bscscan.com/address/0xdF3f8b41a55fb8737D653d6bc7467095e48700c4#code) |
-| `SparkGoHookInfinity` | [`0x8E273c882267f034ACE21dA677dBF0c0eB305B82`](https://bscscan.com/address/0x8E273c882267f034ACE21dA677dBF0c0eB305B82#code) |
+| `SparkGoHookV4` | [`0x5bA7D23C085418fd44B971726e60d4864c8400c4`](https://bscscan.com/address/0x5bA7D23C085418fd44B971726e60d4864c8400c4#code) |
+| `SparkGoHookInfinity` | [`0x05AAb89F069DFAe5723DaF7c8dC21995f37729Dc`](https://bscscan.com/address/0x05AAb89F069DFAe5723DaF7c8dC21995f37729Dc#code) |
 | `SparkGoBurner` | [`0xC99fD815f5C0a5dCf2B6cA36A38AbbB5cF4e4c10`](https://bscscan.com/address/0xC99fD815f5C0a5dCf2B6cA36A38AbbB5cF4e4c10#code) |
-| `SparkGoHookFactory` (one-time deploy helper) | [`0xF3DF835378eC75346b66b7821e501ebAf535Fa16`](https://bscscan.com/address/0xF3DF835378eC75346b66b7821e501ebAf535Fa16#code) |
+| `SparkGoHookFactory` (one-time deploy helper) | [`0x938590Efa1B08b0651cA0eA138801d6D73771D91`](https://bscscan.com/address/0x938590Efa1B08b0651cA0eA138801d6D73771D91#code) |
 
 - `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
 - DEXs: Uniswap v4 → `SparkGoHookV4`, PancakeSwap Infinity → `SparkGoHookInfinity`
 - `launchFee`: `0.001111 ether`, `burner`: `SparkGoBurner` above
 - Quote tokens/routes: same set and values as SparkLauncher above (including 1COIN), native BNB (`address(0)`, `marketCapRef` `3.373e18`, ≈$2,000)
+- Hooks enforce same-block re-entry protection only (no buy-size cap) during the 30-minute antibot window; `SparkToken`'s 3% max-wallet is the only size cap
 
 ### External BSC dependencies
 
@@ -70,11 +73,15 @@ verified on the relevant explorer, proxies linked to their implementations.
 | — | USDT (18 dec) | `0x55d398326f99059fF775485246999027B3197955` |
 | — | USDC (18 dec) | `0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d` |
 | — | USD1 (18 dec) | `0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d` |
-| — | AAPL (Ondo Tokenized) | `0x390a684EF9cADE28A7AD0DFa61AB1Eb3842618c4` |
-| — | NVDA (Ondo Tokenized) | `0xA9eE28C80f960B889dFbd1902055218cBa016F75` |
-| — | TSLA (Ondo Tokenized) | `0x2494b603319d4D9F9715c9f4496d9E0364B59d93` |
-| — | SPCX (Ondo Tokenized) | `0xd0a58BC9D88D3FF48C0294Cb7e45937d0E41A928` |
+| — | AAPLB (Binance bStock, rebasing) | `0x431a3BEE82E2ca41e49895CbECE5bB0F76A89b7A` |
+| — | NVDAB (Binance bStock, rebasing) | `0x02Fca66C1D1aFB4E2A7884261eB00F63598a7436` |
+| — | TSLAB (Binance bStock, rebasing) | `0x5b1910eAaD6450E50f816082Aa078C41F10C292f` |
+| — | SPCXB (Binance bStock, rebasing) | `0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1` |
 | — | 1COIN (18 dec, total supply 1 token) | `0xe43eF1fE041Ba9E8da87E8C5bFD583B3b46A1111` |
+| — | AAPL (Ondo Tokenized, disabled — dead route) | `0x390a684EF9cADE28A7AD0DFa61AB1Eb3842618c4` |
+| — | NVDA (Ondo Tokenized, disabled) | `0xA9eE28C80f960B889dFbd1902055218cBa016F75` |
+| — | TSLA (Ondo Tokenized, disabled — zero liquidity) | `0x2494b603319d4D9F9715c9f4496d9E0364B59d93` |
+| — | SPCX (Ondo Tokenized, disabled) | `0xd0a58BC9D88D3FF48C0294Cb7e45937d0E41A928` |
 
 ---
 
@@ -91,15 +98,17 @@ of BSC — and **Ethereum's USDT/USDC use 6 decimals**, not BSC's 18, so
 
 | Contract | Address |
 |---|---|
-| `SparkToken` (implementation, used by both launchers) | [`0x53457519609B167CA01DCf47BD1b5998DB2C78cb`](https://etherscan.io/address/0x53457519609B167CA01DCf47BD1b5998DB2C78cb#code) |
+| `SparkToken` (implementation, used by both launchers) | [`0x99ff75d2da25ac4cB0C5ea88c31EFEfDa64FCCb1`](https://etherscan.io/address/0x99ff75d2da25ac4cB0C5ea88c31EFEfDa64FCCb1#code) |
 | `SparkLocker` (SparkLauncher's) | [`0x2C238982945d5bE37dc6cFDFDD0c942458326C32`](https://etherscan.io/address/0x2C238982945d5bE37dc6cFDFDD0c942458326C32#code) |
 | `SparkLocker` (SparkGo's) | [`0x541b04c5389E540bcc875EA14F699E539f96F76A`](https://etherscan.io/address/0x541b04c5389E540bcc875EA14F699E539f96F76A#code) |
+
+`SparkToken` antibot: max wallet 3% of supply for 30 minutes after launch, unrestricted after.
 
 ### SparkLauncher
 
 | Contract | Address |
 |---|---|
-| Implementation | [`0x5738FDd259254a1d2e77aB758eE4aB908b21C422`](https://etherscan.io/address/0x5738FDd259254a1d2e77aB758eE4aB908b21C422#code) |
+| Implementation | [`0x6E307660e9366Eb7ECd8686cEa0dA2C012aD6c1c`](https://etherscan.io/address/0x6E307660e9366Eb7ECd8686cEa0dA2C012aD6c1c#code) |
 | **Proxy — use this address** | [`0x1010B4593376A5eEc045F9A706F615ed8417f541`](https://etherscan.io/address/0x1010B4593376A5eEc045F9A706F615ed8417f541#code) |
 
 - `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
@@ -112,16 +121,17 @@ of BSC — and **Ethereum's USDT/USDC use 6 decimals**, not BSC's 18, so
 
 | Contract | Address |
 |---|---|
-| Implementation | [`0xcc2052A4e30DC89181Dc57261d63C0a795F21043`](https://etherscan.io/address/0xcc2052A4e30DC89181Dc57261d63C0a795F21043#code) |
+| Implementation | [`0x605afabfD2C87117EC1BDe8A01F1D9aF3195F785`](https://etherscan.io/address/0x605afabfD2C87117EC1BDe8A01F1D9aF3195F785#code) |
 | **Proxy — use this address** | [`0x1655d6d3D2A6a29cf17bC151eDeA50A14A5DC918`](https://etherscan.io/address/0x1655d6d3D2A6a29cf17bC151eDeA50A14A5DC918#code) |
-| `SparkGoHookV4` | [`0x49706386e0Fb729D24947a57f50097Ac578e80c4`](https://etherscan.io/address/0x49706386e0Fb729D24947a57f50097Ac578e80c4#code) |
+| `SparkGoHookV4` | [`0x331CC61E71249Ba26E591A2b2ee563F588d980C4`](https://etherscan.io/address/0x331CC61E71249Ba26E591A2b2ee563F588d980C4#code) |
 | `SparkGoBurner` | [`0x125Fd8e0BC3cfbe913C65bB2Ba93d7eA9372982c`](https://etherscan.io/address/0x125Fd8e0BC3cfbe913C65bB2Ba93d7eA9372982c#code) |
-| `SparkGoHookFactory` (one-time deploy helper) | [`0x07d7EaACA34EBEa70d4f598A1477550366C82F15`](https://etherscan.io/address/0x07d7EaACA34EBEa70d4f598A1477550366C82F15#code) |
+| `SparkGoHookFactory` (one-time deploy helper) | [`0xbE9dFD8E5e26baAF2bC44914dEB83051a61096c2`](https://etherscan.io/address/0xbE9dFD8E5e26baAF2bC44914dEB83051a61096c2#code) |
 
 - `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
 - DEXs: Uniswap v4 → `SparkGoHookV4` only (no PancakeSwap Infinity on Ethereum)
 - `launchFee`: `0.001111 ether`, `burner`: `SparkGoBurner` above
 - Quote tokens/routes: same set and values as SparkLauncher above, plus native ETH (`address(0)`, `marketCapRef` `5e18`)
+- Hook enforces same-block re-entry protection only (no buy-size cap) during the 30-minute antibot window; `SparkToken`'s 3% max-wallet is the only size cap
 
 ### External Ethereum dependencies
 

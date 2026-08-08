@@ -8,6 +8,12 @@ pools). Both share a bounded-fallback instant-buy routing engine
 chain hops across different DEXs in a single route. All contracts below are
 verified on the relevant explorer, proxies linked to their implementations.
 
+Every platform/CTO/campaign fee wallet across both chains (`SparkLocker`
+platform + CTO fees, SparkGo hook platform + CTO fees, `MerkleDistributor`
+campaign fees) is set to the platform multisig
+`0x56e6A19fF30bB4d91926e4Acf03E1CFaB2cE36d0`. `launchFeeWallet` on both
+launchers is separate and unset (defaults to `owner`).
+
 ## BSC (chain `56`)
 
 ### Shared contracts
@@ -171,6 +177,6 @@ was a separate deploy).
 `MerkleDistributor`: `owner` `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F` on both chains,
 `campaignFee` `0.001111 ether` (native, charged on every `createCampaign` regardless
 of caller — funds the platform's indexing/API work for surfacing campaigns),
-`feeWallet` unset (defaults to `owner`). Campaign creation is permissionless;
+`feeWallet` set to the platform multisig above. Campaign creation is permissionless;
 only a campaign's own `creator` can `sweep` its unclaimed remainder after its
 deadline — the platform's only claim on any campaign is the upfront fee.

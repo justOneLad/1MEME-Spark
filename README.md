@@ -13,7 +13,7 @@ swap fees can be claimed. Two independent, UUPS-upgradeable launcher families ex
 | `spark/SparkLauncherUpgradeable.sol` | `SparkLauncher` | UUPS-upgradeable — plain Uniswap V3 / PancakeSwap V3 launcher, plus the shared routing engine below |
 | `spark/SparkLocker.sol` | `SparkLocker` | Permanent LP-NFT vault for `SparkLauncher`; distributes swap fees to creator and platform |
 | `spark-go/SparkGoLauncher.sol` | `SparkGoLauncher` | Upgradeable, currency-general launcher for Uniswap v4 / PancakeSwap Infinity (singleton pools) |
-| `spark-go/hooks/SparkGoHookV4.sol` | `SparkGoHookV4` | v4 hook — anti-sandwich, max-buy/max-wallet, and a 2% sell-side swap fee, paid in whichever currency the pool is quoted against |
+| `spark-go/hooks/SparkGoHookV4.sol` | `SparkGoHookV4` | v4 hook — anti-sandwich (same-block re-entry block), and a 2% sell-side swap fee, paid in whichever currency the pool is quoted against |
 | `spark-go/hooks/SparkGoHookInfinity.sol` | `SparkGoHookInfinity` | Same protections as `SparkGoHookV4`, for PancakeSwap Infinity CL pools |
 | `spark-go/SparkGoBurner.sol` | `SparkGoBurner` | Receives fees for any token launched with `feeWallet_ = address(0)`; anyone can call `burnV4`/`burnInfinity` to swap 95% of the accrued fees into the token and burn it, paying the caller the other 5% |
 | `common/SparkRouting.sol` | `SparkRouting` (abstract) | Shared bounded-fallback instant-buy routing engine — an owner-configured, ordered list of concrete routes per quote token, inherited by both launchers |

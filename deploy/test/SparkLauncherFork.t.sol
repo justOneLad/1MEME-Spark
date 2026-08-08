@@ -2,6 +2,7 @@
 pragma solidity ^0.8.32;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Fork} from "./Fork.t.sol";
 import {SparkToken} from "spark-contracts/SparkToken.sol";
 import {SparkLocker} from "spark-contracts/SparkLocker.sol";
@@ -199,11 +200,144 @@ contract SparkLauncherForkTest is Fork {
         assertEq(updatedFeeWallet, newCreator, "CTO must reassign the fee wallet");
     }
 
+    function test_antibotWindow_capsAt3Percent_thenUnrestricted() public {
+        // Clones+inits directly (bypassing launch()) so the full supply stays with this contract.
+        SparkToken t = SparkToken(Clones.clone(address(tokenImpl)));
+        t.initSpark("Anti", "ANTI", "", address(this));
+
+        uint256 maxWallet = t.MAX_WALLET();
+        assertEq(maxWallet, t.TOTAL_SUPPLY() * 3 / 100, "max wallet must be 3% of supply");
+
+        address recipient = address(0xBEEF1);
+        vm.expectRevert(SparkToken.MaxWalletExceeded.selector);
+        t.transfer(recipient, maxWallet + 1);
+
+        t.transfer(recipient, maxWallet); // exactly at the cap must succeed
+
+        vm.warp(block.timestamp + t.ANTIBOT_DURATION());
+        address recipient2 = address(0xBEEF2);
+        t.transfer(recipient2, maxWallet + 1); // past the antibot window, unrestricted
+        assertEq(t.balanceOf(recipient2), maxWallet + 1);
+    }
+
+    function test_antibotWindow_boundary_oneSecondBeforeStillCapped_exactEndUnrestricted() public {
+        SparkToken t = _freshAntibotToken();
+        uint256 maxWallet = t.MAX_WALLET();
+        uint256 launchTs = t.launchTimestamp();
+
+        vm.warp(launchTs + t.ANTIBOT_DURATION() - 1); // one second before the window closes
+        vm.expectRevert(SparkToken.MaxWalletExceeded.selector);
+        t.transfer(address(0xBEEF1), maxWallet + 1);
+
+        vm.warp(launchTs + t.ANTIBOT_DURATION()); // exactly at the boundary — `>=` means unrestricted
+        t.transfer(address(0xBEEF2), maxWallet + 1);
+        assertEq(t.balanceOf(address(0xBEEF2)), maxWallet + 1);
+    }
+
+    function test_antibotWindow_exemptRecipientBypassesCap() public {
+        SparkToken t = _freshAntibotToken();
+        address exempt = address(0xEEEE);
+        t.setExempt(exempt, true);
+
+        t.transfer(exempt, t.MAX_WALLET() + 1); // would revert for a non-exempt recipient
+        assertEq(t.balanceOf(exempt), t.MAX_WALLET() + 1);
+
+        t.setExempt(exempt, false); // revoking exemption re-enables the cap on new inbound transfers
+        vm.expectRevert(SparkToken.MaxWalletExceeded.selector);
+        t.transfer(exempt, 1);
+    }
+
+    function test_antibotWindow_cumulativeTransfersHitCap() public {
+        SparkToken t = _freshAntibotToken();
+        uint256 maxWallet = t.MAX_WALLET();
+        address recipient = address(0xBEEF3);
+
+        t.transfer(recipient, maxWallet - 1);
+        vm.expectRevert(SparkToken.MaxWalletExceeded.selector); // 2 more wei pushes the running total over
+        t.transfer(recipient, 2);
+
+        t.transfer(recipient, 1); // exactly 1 more wei lands right at the cap
+        assertEq(t.balanceOf(recipient), maxWallet);
+    }
+
+    function test_antibotWindow_transferFromAlsoEnforcesCap() public {
+        SparkToken t = _freshAntibotToken();
+        uint256 maxWallet = t.MAX_WALLET();
+        address spender = address(0x5BEEF);
+        address recipient = address(0xBEEF4);
+
+        t.approve(spender, type(uint256).max);
+        vm.prank(spender);
+        vm.expectRevert(SparkToken.MaxWalletExceeded.selector);
+        t.transferFrom(address(this), recipient, maxWallet + 1);
+
+        vm.prank(spender);
+        t.transferFrom(address(this), recipient, maxWallet);
+        assertEq(t.balanceOf(recipient), maxWallet);
+    }
+
+    function test_antibotWindow_zeroAmountTransferNeverReverts() public {
+        SparkToken t = _freshAntibotToken();
+        address recipient = address(0xBEEF5);
+        t.transfer(recipient, t.MAX_WALLET()); // fill recipient to exactly the cap
+        t.transfer(recipient, 0); // a zero-amount transfer must still succeed even sitting at the cap
+        assertEq(t.balanceOf(recipient), t.MAX_WALLET());
+    }
+
+    function test_antibotWindow_senderBalanceIsNeverRestricted() public {
+        // Only the recipient side is checked — a holder above MAX_WALLET can still send out freely.
+        SparkToken t = _freshAntibotToken();
+        assertGt(t.balanceOf(address(this)), t.MAX_WALLET());
+        t.transfer(address(0xBEEF6), t.MAX_WALLET());
+        t.transfer(address(0xBEEF7), t.MAX_WALLET());
+        assertLt(t.balanceOf(address(this)), t.TOTAL_SUPPLY());
+    }
+
+    function test_transfer_toZeroAddressAlwaysRevertsRegardlessOfWindow() public {
+        SparkToken t = _freshAntibotToken();
+        vm.expectRevert(SparkToken.ZeroAddress.selector);
+        t.transfer(address(0), 1);
+
+        vm.warp(block.timestamp + t.ANTIBOT_DURATION()); // past the window, still must revert
+        vm.expectRevert(SparkToken.ZeroAddress.selector);
+        t.transfer(address(0), 1);
+    }
+
+    function _freshAntibotToken() private returns (SparkToken t) {
+        t = SparkToken(Clones.clone(address(tokenImpl)));
+        t.initSpark("Anti", "ANTI", "", address(this));
+    }
+
+    function test_setTokenImpl_onlyOwnerAndAppliesToFutureLaunches() public {
+        vm.prank(address(0xBAD));
+        vm.expectRevert();
+        launcher.setTokenImpl(address(0x1234));
+
+        SparkToken newImpl = new SparkToken();
+        vm.prank(DEPLOYER);
+        launcher.setTokenImpl(address(newImpl));
+        assertEq(launcher.tokenImpl(), address(newImpl));
+
+        vm.deal(address(this), 1 ether);
+        bytes32 salt = _mineVanitySaltFor(address(this), address(newImpl));
+        SparkLauncher.LaunchParams memory p = SparkLauncher.LaunchParams({
+            name: "New", symbol: "NEW", metaURI: "",
+            feeWallet: address(0), factory: PANCAKE_V3_FACTORY, quoteToken: WBNB,
+            vanitySalt: salt, minQuoteOut: 0, minTokensOut: 0, revertOnInstantBuyFailure: false
+        });
+        (address token,,) = launcher.launch{value: 0.001111 ether}(p);
+        assertEq(SparkToken(token).ANTIBOT_DURATION(), newImpl.ANTIBOT_DURATION(), "clone must run the newly-set implementation's logic");
+    }
+
     receive() external payable {}
 
     function _mineVanitySalt(address creator) internal view returns (bytes32) {
+        return _mineVanitySaltFor(creator, address(tokenImpl));
+    }
+
+    function _mineVanitySaltFor(address creator, address impl) internal view returns (bytes32) {
         bytes32 initCodeHash = keccak256(abi.encodePacked(
-            hex"3d602d80600a3d3981f3363d3d373d3d3d363d73", address(tokenImpl), hex"5af43d82803e903d91602b57fd5bf3"
+            hex"3d602d80600a3d3981f3363d3d373d3d3d363d73", impl, hex"5af43d82803e903d91602b57fd5bf3"
         ));
         for (uint256 nonce; ; ++nonce) {
             bytes32 vanitySalt = bytes32(nonce);

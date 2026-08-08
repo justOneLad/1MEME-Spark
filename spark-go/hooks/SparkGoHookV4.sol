@@ -3,10 +3,9 @@ pragma solidity ^0.8.32;
 
 // 1MEME Spark — 1coin.meme
 //
-// SparkGo's v4-style hook — anti-sandwich, max-buy/wallet limits, 2% sell fee.
-// Plain, non-upgradeable contract by design (not a proxy) — a V4 hook's
-// deployed address low bits must match REQUIRED_PERMISSIONS, so it's
-// redeployed fresh and repointed via SparkGoLauncher.addDex instead.
+// SparkGo's v4-style hook — anti-sandwich (same-block re-entry block), 2% sell fee.
+// Non-upgradeable: redeployed fresh and repointed via addDex (CREATE2 address
+// must match REQUIRED_PERMISSIONS).
 
 struct V4PoolKey {
     address currency0;
@@ -38,8 +37,6 @@ contract SparkGoHookV4 {
     error NotPoolManager();
     error AlreadyRegistered();
     error NotRegistered();
-    error MaxBuyExceeded();
-    error MaxWalletExceeded();
     error SameBlockSwap();
     error TransferFailed();
     error InsufficientCTOFee();
@@ -47,10 +44,9 @@ contract SparkGoHookV4 {
 
     uint160 public constant REQUIRED_PERMISSIONS = 0xC4;
 
-    uint256 public constant TOTAL_SUPPLY   = 1_000_000_000e18;
-    uint256 public constant MAX_TX_BLOCKS  = 20_000;
-    uint256 public constant MAX_BUY_AMOUNT = TOTAL_SUPPLY / 50;
-    uint256 public constant HOOK_FEE_BPS   = 200;
+    uint256 public constant TOTAL_SUPPLY     = 1_000_000_000e18;
+    uint256 public constant ANTIBOT_DURATION = 30 minutes;
+    uint256 public constant HOOK_FEE_BPS     = 200;
 
     address public immutable poolManager;
     address public immutable launcher;
@@ -60,16 +56,15 @@ contract SparkGoHookV4 {
 
     struct PoolInfo {
         address token;
-        address quoteCurrency;   // address(0) = native; otherwise an arbitrary ERC20
+        address quoteCurrency;   // address(0) = native
         bool    tokenIsCurrency0;
         address creator;
-        uint256 launchBlock;
+        uint256 launchTimestamp;
         bool    registered;
     }
 
     mapping(bytes32 => PoolInfo)                   public pools;
     mapping(bytes32 => mapping(address => uint256)) private _lastSwapBlock;
-    mapping(bytes32 => mapping(address => uint256)) private _boughtInWindow;
     mapping(bytes32 => uint256)                     public  accruedFees;
 
     struct CTOApplication {
@@ -170,7 +165,7 @@ contract SparkGoHookV4 {
             quoteCurrency:    tokenIsCurrency0 ? key.currency1 : key.currency0,
             tokenIsCurrency0: tokenIsCurrency0,
             creator:          creator,
-            launchBlock:      block.number,
+            launchTimestamp:  block.timestamp,
             registered:       true
         });
         emit PoolRegistered(poolId, token, creator);
@@ -208,7 +203,7 @@ contract SparkGoHookV4 {
         PoolInfo storage info = pools[poolId];
         if (!info.registered) return (this.beforeSwap.selector, int256(0), 0);
 
-        if (block.number < info.launchBlock + MAX_TX_BLOCKS) {
+        if (block.timestamp < info.launchTimestamp + ANTIBOT_DURATION) {
             if (_lastSwapBlock[poolId][sender] == block.number) revert SameBlockSwap();
             _lastSwapBlock[poolId][sender] = block.number;
         }
@@ -216,7 +211,7 @@ contract SparkGoHookV4 {
         return (this.beforeSwap.selector, int256(0), 0);
     }
 
-    function afterSwap(address sender, V4PoolKey calldata key, V4SwapParams calldata params, int256 delta, bytes calldata)
+    function afterSwap(address, V4PoolKey calldata key, V4SwapParams calldata params, int256 delta, bytes calldata)
         external returns (bytes4, int128)
     {
         if (msg.sender != poolManager) revert NotPoolManager();
@@ -229,16 +224,6 @@ contract SparkGoHookV4 {
         (int128 tokenDelta, int128 quoteDelta) = info.tokenIsCurrency0
             ? (amount0Delta, amount1Delta)
             : (amount1Delta, amount0Delta);
-
-        if (block.number < info.launchBlock + MAX_TX_BLOCKS) {
-            if (tokenDelta > 0) {
-                uint256 boughtAmt = uint256(uint128(tokenDelta));
-                if (boughtAmt > MAX_BUY_AMOUNT) revert MaxBuyExceeded();
-                uint256 newTotal = _boughtInWindow[poolId][sender] + boughtAmt;
-                if (newTotal > MAX_BUY_AMOUNT) revert MaxWalletExceeded();
-                _boughtInWindow[poolId][sender] = newTotal;
-            }
-        }
 
         bool isExactInputSell = tokenDelta < 0 && params.amountSpecified < 0;
         if (!isExactInputSell || quoteDelta <= 0) return (this.afterSwap.selector, int128(0));

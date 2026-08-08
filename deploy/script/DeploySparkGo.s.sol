@@ -3,17 +3,11 @@ pragma solidity ^0.8.32;
 
 // 1MEME Spark — 1coin.meme
 //
-// Deploys the upgradeable, currency-general SparkGoLauncher behind a UUPS
-// proxy, plus fresh (non-upgradeable, by design — see SparkGoHookV4.sol's
-// header comment) hooks and burner. Repoints the existing SparkLocker
-// (0x01245e814bbc3A1DC3b24924FB0E4E3b6863105B, still holding the STOCKS/
-// NOINTERNET positions from the old SparkLauncherV2) at the new launcher via
-// setLauncher — safe for the same reason as DeploySparkUpgradeable.s.sol: the
-// gate only affects new position registration, not existing fee claims.
-//
-// SparkGoHookV4 is deployed via SparkGoHookFactory, same CREATE2-ownership
-// pattern as the original HookV4Factory (see that contract's header comment
-// for why a direct salted `new` from a broadcasting EOA can't be used).
+// Deploys the upgradeable SparkGoLauncher behind a UUPS proxy, plus fresh
+// (non-upgradeable) hooks and burner. Repoints the existing SparkLocker
+// (0x01245e814bbc3A1DC3b24924FB0E4E3b6863105B) at the new launcher via
+// setLauncher. SparkGoHookV4 is deployed via SparkGoHookFactory (see its
+// header for the CREATE2-ownership reasoning).
 
 import {Script, console2} from "forge-std/Script.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

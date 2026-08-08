@@ -6,7 +6,7 @@ import {Fork} from "./Fork.t.sol";
 import {SparkToken} from "spark-contracts/SparkToken.sol";
 import {SparkLocker} from "spark-contracts/SparkLocker.sol";
 import {SparkGoLauncher} from "spark-go-contracts/SparkGoLauncher.sol";
-import {SparkGoHookV4} from "spark-go-contracts/hooks/SparkGoHookV4.sol";
+import {SparkGoHookV4, V4PoolKey as HookV4PoolKey, V4SwapParams as HookV4SwapParams} from "spark-go-contracts/hooks/SparkGoHookV4.sol";
 import {SparkGoBurner} from "spark-go-contracts/SparkGoBurner.sol";
 import {V4PoolKey, V4SwapParams, IV4PoolManagerSwap} from "common-contracts/SparkRouting.sol";
 
@@ -224,6 +224,155 @@ contract SparkGoLauncherForkTest is Fork {
         assertGt(IERC20(burnToken).balanceOf(0x000000000000000000000000000000000000dEaD), 0, "burned tokens must be at the dead address");
     }
 
+    function test_sameBlockSwapStillBlocked_butHookNoLongerCapsBuySize() public {
+        vm.deal(address(this), 1 ether);
+        bytes32 salt = _mineVanitySalt(address(this));
+        SparkGoLauncher.LaunchParams memory p = SparkGoLauncher.LaunchParams({
+            name: "Anti", symbol: "ANTI", metaURI: "",
+            feeWallet: address(this), positionManager: UNISWAP_V4_POSITION_MANAGER, quoteToken: address(0),
+            vanitySalt: salt, minQuoteOut: 0, minTokensOut: 0, revertOnInstantBuyFailure: false
+        });
+        (address token,,) = launcher.launch{value: 0.001111 ether}(p);
+
+        // 0.2 ether reliably crosses the 3% cap (~0.16 ether ~= 2.6%); reverts via SparkToken's
+        // MaxWalletExceeded, wrapped by v4's PoolManager, so just assert it fails at all.
+        V4Trader bigBuyer = new V4Trader(UNISWAP_V4_POOL_MANAGER);
+        vm.deal(address(bigBuyer), 1 ether);
+        vm.expectRevert();
+        bigBuyer.buy{value: 0.2 ether}(address(hook), token, 0.2 ether);
+
+        // Same-block re-entry from the same sender is still blocked regardless of buy size.
+        V4Trader smallBuyer = new V4Trader(UNISWAP_V4_POOL_MANAGER);
+        vm.deal(address(smallBuyer), 1 ether);
+        smallBuyer.buy{value: 0.01 ether}(address(hook), token, 0.01 ether);
+        vm.expectRevert(); // same WrappedError situation as above
+        smallBuyer.buy{value: 0.01 ether}(address(hook), token, 0.01 ether);
+    }
+
+    function test_buy_wellUnderCap_succeedsWithoutReverting() public {
+        vm.deal(address(this), 1 ether);
+        bytes32 salt = _mineVanitySalt(address(this));
+        SparkGoLauncher.LaunchParams memory p = SparkGoLauncher.LaunchParams({
+            name: "Anti", symbol: "ANTI", metaURI: "",
+            feeWallet: address(this), positionManager: UNISWAP_V4_POSITION_MANAGER, quoteToken: address(0),
+            vanitySalt: salt, minQuoteOut: 0, minTokensOut: 0, revertOnInstantBuyFailure: false
+        });
+        (address token,,) = launcher.launch{value: 0.001111 ether}(p);
+
+        V4Trader buyer = new V4Trader(UNISWAP_V4_POOL_MANAGER);
+        vm.deal(address(buyer), 0.1 ether);
+        buyer.buy{value: 0.1 ether}(address(hook), token, 0.1 ether); // ~1.8% of supply, well under the 3% cap
+        uint256 bal = IERC20(token).balanceOf(address(buyer));
+        assertGt(bal, 0);
+        assertLt(bal, SparkToken(token).MAX_WALLET());
+    }
+
+    function test_sameBlockSwap_differentSendersAreNotBlockedByEachOther() public {
+        vm.deal(address(this), 1 ether);
+        bytes32 salt = _mineVanitySalt(address(this));
+        SparkGoLauncher.LaunchParams memory p = SparkGoLauncher.LaunchParams({
+            name: "Anti", symbol: "ANTI", metaURI: "",
+            feeWallet: address(this), positionManager: UNISWAP_V4_POSITION_MANAGER, quoteToken: address(0),
+            vanitySalt: salt, minQuoteOut: 0, minTokensOut: 0, revertOnInstantBuyFailure: false
+        });
+        (address token,,) = launcher.launch{value: 0.001111 ether}(p);
+
+        // Same block, two distinct senders — the per-sender SameBlockSwap guard must not conflate them.
+        V4Trader buyerA = new V4Trader(UNISWAP_V4_POOL_MANAGER);
+        V4Trader buyerB = new V4Trader(UNISWAP_V4_POOL_MANAGER);
+        vm.deal(address(buyerA), 0.05 ether);
+        vm.deal(address(buyerB), 0.05 ether);
+        buyerA.buy{value: 0.05 ether}(address(hook), token, 0.05 ether);
+        buyerB.buy{value: 0.05 ether}(address(hook), token, 0.05 ether); // must not revert
+        assertGt(IERC20(token).balanceOf(address(buyerB)), 0);
+    }
+
+    function test_sameBlockSwap_blocksSellImmediatelyAfterBuyToo() public {
+        vm.deal(address(this), 1 ether);
+        bytes32 salt = _mineVanitySalt(address(this));
+        SparkGoLauncher.LaunchParams memory p = SparkGoLauncher.LaunchParams({
+            name: "Anti", symbol: "ANTI", metaURI: "",
+            feeWallet: address(this), positionManager: UNISWAP_V4_POSITION_MANAGER, quoteToken: address(0),
+            vanitySalt: salt, minQuoteOut: 0, minTokensOut: 0, revertOnInstantBuyFailure: false
+        });
+        (address token,,) = launcher.launch{value: 0.001111 ether}(p);
+
+        V4Trader trader = new V4Trader(UNISWAP_V4_POOL_MANAGER);
+        vm.deal(address(trader), 0.05 ether);
+        trader.buy{value: 0.05 ether}(address(hook), token, 0.05 ether);
+        uint256 gotTokens = IERC20(token).balanceOf(address(trader));
+
+        vm.expectRevert(); // SameBlockSwap wrapped, regardless of swap direction
+        trader.sell(address(hook), token, gotTokens);
+    }
+
+    function test_sameBlockSwap_allowedAgainAfterAntibotWindowExpires() public {
+        vm.deal(address(this), 1 ether);
+        bytes32 salt = _mineVanitySalt(address(this));
+        SparkGoLauncher.LaunchParams memory p = SparkGoLauncher.LaunchParams({
+            name: "Anti", symbol: "ANTI", metaURI: "",
+            feeWallet: address(this), positionManager: UNISWAP_V4_POSITION_MANAGER, quoteToken: address(0),
+            vanitySalt: salt, minQuoteOut: 0, minTokensOut: 0, revertOnInstantBuyFailure: false
+        });
+        (address token,,) = launcher.launch{value: 0.001111 ether}(p);
+
+        vm.warp(block.timestamp + hook.ANTIBOT_DURATION()); // past the window — SameBlockSwap gate is off
+
+        V4Trader trader = new V4Trader(UNISWAP_V4_POOL_MANAGER);
+        vm.deal(address(trader), 0.1 ether);
+        trader.buy{value: 0.05 ether}(address(hook), token, 0.05 ether);
+        trader.buy{value: 0.05 ether}(address(hook), token, 0.05 ether); // same sender, same block — must not revert
+        assertGt(IERC20(token).balanceOf(address(trader)), 0);
+    }
+
+    function test_registerPool_revertsIfAlreadyRegistered() public {
+        vm.deal(address(this), 1 ether);
+        bytes32 salt = _mineVanitySalt(address(this));
+        SparkGoLauncher.LaunchParams memory p = SparkGoLauncher.LaunchParams({
+            name: "Anti", symbol: "ANTI", metaURI: "",
+            feeWallet: address(this), positionManager: UNISWAP_V4_POSITION_MANAGER, quoteToken: address(0),
+            vanitySalt: salt, minQuoteOut: 0, minTokensOut: 0, revertOnInstantBuyFailure: false
+        });
+        (address token,,) = launcher.launch{value: 0.001111 ether}(p);
+
+        HookV4PoolKey memory key = HookV4PoolKey({currency0: address(0), currency1: token, fee: 0, tickSpacing: 200, hooks: address(hook)});
+        vm.prank(address(launcher));
+        vm.expectRevert(SparkGoHookV4.AlreadyRegistered.selector);
+        hook.registerPool(key, token, address(this));
+    }
+
+    function test_beforeSwapAndAfterSwap_onlyCallableByPoolManager() public {
+        HookV4PoolKey memory key = HookV4PoolKey({currency0: address(0), currency1: address(0x1234), fee: 0, tickSpacing: 200, hooks: address(hook)});
+        HookV4SwapParams memory params = HookV4SwapParams({zeroForOne: true, amountSpecified: -1, sqrtPriceLimitX96: 0});
+
+        vm.expectRevert(SparkGoHookV4.NotPoolManager.selector);
+        hook.beforeSwap(address(this), key, params, "");
+
+        vm.expectRevert(SparkGoHookV4.NotPoolManager.selector);
+        hook.afterSwap(address(this), key, params, int256(0), "");
+    }
+
+    function test_setTokenImpl_onlyOwnerAndAppliesToFutureLaunches() public {
+        vm.prank(address(0xBAD));
+        vm.expectRevert();
+        launcher.setTokenImpl(address(0x1234));
+
+        SparkToken newImpl = new SparkToken();
+        vm.prank(DEPLOYER);
+        launcher.setTokenImpl(address(newImpl));
+        assertEq(launcher.tokenImpl(), address(newImpl));
+
+        vm.deal(address(this), 1 ether);
+        bytes32 salt = _mineVanitySaltFor(address(this), address(newImpl));
+        SparkGoLauncher.LaunchParams memory p = SparkGoLauncher.LaunchParams({
+            name: "New", symbol: "NEW", metaURI: "",
+            feeWallet: address(this), positionManager: UNISWAP_V4_POSITION_MANAGER, quoteToken: address(0),
+            vanitySalt: salt, minQuoteOut: 0, minTokensOut: 0, revertOnInstantBuyFailure: false
+        });
+        (address token,,) = launcher.launch{value: 0.001111 ether}(p);
+        assertEq(SparkToken(token).ANTIBOT_DURATION(), newImpl.ANTIBOT_DURATION(), "clone must run the newly-set implementation's logic");
+    }
+
     receive() external payable {}
 
     function _mineHookSalt(address poolManager_, address launcher_, address platformWallet_) internal view returns (bytes32) {
@@ -245,6 +394,18 @@ contract SparkGoLauncherForkTest is Fork {
             hex"3d602d80600a3d3981f3363d3d373d3d3d363d73", address(tokenImpl), hex"5af43d82803e903d91602b57fd5bf3"
         ));
         for (uint256 nonce = startNonce; ; ++nonce) {
+            bytes32 vanitySalt = bytes32(nonce);
+            bytes32 actualSalt = keccak256(abi.encode(creator, vanitySalt));
+            address predicted = vm.computeCreate2Address(actualSalt, initCodeHash, address(launcher));
+            if (uint16(uint160(predicted)) == 0x1111) return vanitySalt;
+        }
+    }
+
+    function _mineVanitySaltFor(address creator, address impl) internal view returns (bytes32) {
+        bytes32 initCodeHash = keccak256(abi.encodePacked(
+            hex"3d602d80600a3d3981f3363d3d373d3d3d363d73", impl, hex"5af43d82803e903d91602b57fd5bf3"
+        ));
+        for (uint256 nonce; ; ++nonce) {
             bytes32 vanitySalt = bytes32(nonce);
             bytes32 actualSalt = keccak256(abi.encode(creator, vanitySalt));
             address predicted = vm.computeCreate2Address(actualSalt, initCodeHash, address(launcher));

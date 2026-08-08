@@ -3,13 +3,10 @@ pragma solidity ^0.8.32;
 
 // 1MEME Spark — 1coin.meme
 //
-// Owner-only config update against the already-deployed BSC SparkLauncher/
-// SparkGo proxies: raises WBNB/native marketCapRef to a $2,000 launch
-// reference, and registers 1COIN as a quote token at a $1,500 reference.
-// 1COIN's only real liquidity is a thin PancakeSwap V2 pool (its total
-// supply is 1 token) — the V2_STYLE route is real but shallow; instant-buy
-// through it will hit minQuoteOut/slippage limits well before native WBNB
-// launches would.
+// Owner-only config update on BSC: raises WBNB/native marketCapRef to a
+// $2,000 reference, and registers 1COIN at a $1,500 reference. 1COIN's only
+// liquidity is a thin PancakeSwap V2 pool (total supply is 1 token) — real
+// but shallow, so instant-buy through it hits slippage limits fast.
 
 import {Script, console2} from "forge-std/Script.sol";
 import {SparkLauncher} from "spark-contracts/SparkLauncherUpgradeable.sol";

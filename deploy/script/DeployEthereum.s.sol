@@ -3,11 +3,9 @@ pragma solidity ^0.8.32;
 
 // 1MEME Spark — 1coin.meme
 //
-// First Ethereum mainnet deploy: fresh SparkToken impl + a dedicated
-// SparkLocker per launcher (nothing pre-exists on this chain to reuse, unlike
-// BSC). SparkGo registers only Uniswap v4 — PancakeSwap Infinity has no
-// Ethereum deployment. Ethereum's USDT/USDC are 6-decimal (BSC's are 18);
-// marketCapRef values are scaled accordingly.
+// First Ethereum deploy: fresh SparkToken + per-launcher SparkLocker (nothing
+// to reuse, unlike BSC). SparkGo is Uniswap v4 only (no Infinity on Ethereum).
+// USDT/USDC are 6-decimal here (BSC's are 18) — marketCapRef scaled accordingly.
 
 import {Script, console2} from "forge-std/Script.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

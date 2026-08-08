@@ -4,9 +4,7 @@ pragma solidity ^0.8.32;
 // 1MEME Spark — 1coin.meme
 //
 // SparkLauncher — upgradeable, plain Uniswap V3 / PancakeSwap V3 launcher.
-//
-// State variables below (and SparkRouting's `routes` mapping) must only ever
-// be appended to in future upgrades, never reordered or removed.
+// Storage below is append-only across upgrades.
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -127,13 +125,13 @@ contract SparkLauncher is Initializable, UUPSUpgradeable, OwnableUpgradeable, Sp
     struct DexConfig {
         address positionManager;
         address router;
-        bool    routerNoDeadline; // true for Uniswap SwapRouter02-style routers (no `deadline` field)
+        bool    routerNoDeadline; // no `deadline` field
         bool    enabled;
     }
 
     struct QuoteToken {
         uint256 marketCapRef;
-        uint24  wethPairFee; // retained for informational/back-compat purposes; instant-buy leg 1 now uses `routes` instead
+        uint24  wethPairFee; // legacy, unused by routing
         bool    enabled;
     }
 
@@ -145,9 +143,9 @@ contract SparkLauncher is Initializable, UUPSUpgradeable, OwnableUpgradeable, Sp
         address factory;
         address quoteToken;
         bytes32 vanitySalt;
-        uint256 minQuoteOut;                 // leg 1 (native -> quoteToken via fallback routes) slippage floor; 0 = no check
-        uint256 minTokensOut;                // leg 2 (quoteToken -> new token) slippage floor; 0 = no check
-        bool    revertOnInstantBuyFailure;    // true = revert whole launch() if instant-buy fails; false = skip + refund
+        uint256 minQuoteOut;                // leg 1 slippage floor; 0 = no check
+        uint256 minTokensOut;                // leg 2 slippage floor; 0 = no check
+        bool    revertOnInstantBuyFailure;   // false = skip + refund instead of reverting
     }
 
     mapping(address => DexConfig)  public dexes;
@@ -174,6 +172,7 @@ contract SparkLauncher is Initializable, UUPSUpgradeable, OwnableUpgradeable, Sp
     event QuoteTokenDisabled(address indexed token);
     event LaunchFeeWalletSet(address indexed wallet);
     event LaunchFeeSet(uint256 fee);
+    event TokenImplSet(address indexed tokenImpl);
     event MarketCapRefSet(address indexed token, uint256 marketCapRef);
     event ETHRescued(address indexed to, uint256 amount);
     event ERC20Rescued(address indexed token, address indexed to, uint256 amount);
@@ -239,6 +238,12 @@ contract SparkLauncher is Initializable, UUPSUpgradeable, OwnableUpgradeable, Sp
     function setLaunchFeeWallet(address wallet) external onlyOwner {
         launchFeeWallet = wallet;
         emit LaunchFeeWalletSet(wallet);
+    }
+
+    function setTokenImpl(address tokenImpl_) external onlyOwner {
+        if (tokenImpl_ == address(0)) revert ZeroAddress();
+        tokenImpl = tokenImpl_;
+        emit TokenImplSet(tokenImpl_);
     }
 
     function _launchFeeRecipient() private view returns (address) {

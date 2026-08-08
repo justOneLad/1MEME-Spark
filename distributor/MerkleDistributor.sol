@@ -3,30 +3,17 @@ pragma solidity ^0.8.32;
 
 // 1MEME Spark — 1coin.meme
 //
-// Independent, protocol-agnostic claim-based distributor — no relation to any
-// Spark launcher. UUPS-upgradeable (unlike MultiSender.sol's plain, ownerless
-// design in this same folder) because this one does hold funds across
-// long-lived campaigns and does have an owner, so the same "state that
-// persists and might need a fix without redeploying" reasoning that justifies
-// upgradeability for the launchers applies here too.
+// Protocol-agnostic, claim-based distributor. UUPS-upgradeable — holds funds
+// across long-lived campaigns, unlike MultiSender's stateless design.
 //
-// One contract, many campaigns, open to anyone: any caller opens a campaign
-// per token (or native currency) with a Merkle root committing to every
-// (index, account, amount) allocation, funds it in the same transaction, and
-// each recipient (or anyone claiming on their behalf — funds always go to the
-// committed `account`, never to msg.sender) submits a proof to claim. Each
-// campaign's `remaining` balance is tracked independently so multiple
-// campaigns sharing one contract, including several native-funded ones,
-// never mix accounting.
+// Permissionless: anyone opens a campaign (per token or native) with a Merkle
+// root over (index, account, amount), funds it in the same transaction; each
+// campaign tracks its own `remaining` so accounting never mixes. Claims always
+// pay the committed `account`, regardless of caller.
 //
-// createCampaign charges a flat native listing fee (always native regardless
-// of the campaign's own token, same convention as SparkLauncher's launchFee)
-// — this funds the off-chain indexing/API work needed to actually surface
-// other people's campaigns/drops, since nothing else about this contract
-// requires the platform to do anything after a campaign is created. Only
-// that campaign's own `creator` can sweep its unclaimed remainder after the
-// deadline — the platform's cut is the upfront fee, it never has a claim on
-// distribution funds it didn't fund itself.
+// createCampaign charges a flat native fee (funds off-chain indexing/API).
+// Only that campaign's `creator` can sweep its unclaimed remainder after the
+// deadline — the platform's only claim is the upfront fee.
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";

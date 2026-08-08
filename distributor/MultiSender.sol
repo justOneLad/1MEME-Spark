@@ -3,15 +3,9 @@ pragma solidity ^0.8.32;
 
 // 1MEME Spark — 1coin.meme
 //
-// Independent, protocol-agnostic batch sender — no relation to any Spark
-// launcher. Permissionless and fully stateless: every call fans out the
-// caller's own funds (native value, or ERC20 pulled directly from the caller
-// per recipient) in one transaction and holds nothing afterward. No owner,
-// no persistent balance, so there is nothing to rug, freeze, or upgrade —
-// same reasoning that already keeps SparkGoHookV4/SparkGoBurner plain,
-// non-upgradeable contracts elsewhere in this repo, taken to its conclusion:
-// no owner and no state at all means reentrancy from a malicious recipient
-// has nothing shared to corrupt, so no guard is needed either.
+// Protocol-agnostic batch sender. Permissionless, stateless: fans out the
+// caller's own funds in one transaction and holds nothing afterward. No
+// owner, no persistent balance, no reentrancy surface.
 
 contract MultiSender {
     error LengthMismatch();

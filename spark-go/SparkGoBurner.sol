@@ -5,9 +5,6 @@ pragma solidity ^0.8.32;
 //
 // SparkGo's burn-and-reward utility. Currency-general: tracks and swaps
 // whichever currency a given pool actually uses, not just native BNB.
-//
-// Inherits SparkRouting to reuse its _executeV4Swap/_executeInfinitySwap
-// swap primitives; the `routes`/RouteSucceeded surface is unused here.
 
 import "../common/SparkRouting.sol";
 
@@ -41,7 +38,7 @@ contract SparkGoBurner is SparkRouting {
     receive() external payable {}
 
     function _weth() internal pure override returns (address) {
-        return address(0); // unused: this contract only ever calls _executeV4Swap/_executeInfinitySwap directly, never leg-1 fallback routing
+        return address(0); // unused, no leg-1 fallback routing here
     }
 
     function burnV4(address poolManager_, address hook_, address token, address quoteToken_)

@@ -40,8 +40,6 @@ contract SparkGoHookInfinity {
     error NotPoolManager();
     error AlreadyRegistered();
     error NotRegistered();
-    error MaxBuyExceeded();
-    error MaxWalletExceeded();
     error SameBlockSwap();
     error TransferFailed();
     error InsufficientCTOFee();
@@ -49,10 +47,9 @@ contract SparkGoHookInfinity {
 
     uint16 public constant REQUIRED_BITMAP = 0x8C0;
 
-    uint256 public constant TOTAL_SUPPLY   = 1_000_000_000e18;
-    uint256 public constant MAX_TX_BLOCKS  = 20_000;
-    uint256 public constant MAX_BUY_AMOUNT = TOTAL_SUPPLY / 50;
-    uint256 public constant HOOK_FEE_BPS   = 200;
+    uint256 public constant TOTAL_SUPPLY     = 1_000_000_000e18;
+    uint256 public constant ANTIBOT_DURATION = 30 minutes;
+    uint256 public constant HOOK_FEE_BPS     = 200;
 
     address public immutable clPoolManager;
     address public immutable vault;
@@ -63,16 +60,15 @@ contract SparkGoHookInfinity {
 
     struct PoolInfo {
         address token;
-        address quoteCurrency;   // address(0) = native; otherwise an arbitrary ERC20
+        address quoteCurrency;   // address(0) = native
         bool    tokenIsCurrency0;
         address creator;
-        uint256 launchBlock;
+        uint256 launchTimestamp;
         bool    registered;
     }
 
     mapping(bytes32 => PoolInfo)                   public pools;
     mapping(bytes32 => mapping(address => uint256)) private _lastSwapBlock;
-    mapping(bytes32 => mapping(address => uint256)) private _boughtInWindow;
     mapping(bytes32 => uint256)                     public  accruedFees;
 
     struct CTOApplication {
@@ -178,7 +174,7 @@ contract SparkGoHookInfinity {
             quoteCurrency:    tokenIsCurrency0 ? key.currency1 : key.currency0,
             tokenIsCurrency0: tokenIsCurrency0,
             creator:          creator,
-            launchBlock:      block.number,
+            launchTimestamp:  block.timestamp,
             registered:       true
         });
         emit PoolRegistered(poolId, token, creator);
@@ -216,7 +212,7 @@ contract SparkGoHookInfinity {
         PoolInfo storage info = pools[poolId];
         if (!info.registered) return (this.beforeSwap.selector, int256(0), 0);
 
-        if (block.number < info.launchBlock + MAX_TX_BLOCKS) {
+        if (block.timestamp < info.launchTimestamp + ANTIBOT_DURATION) {
             if (_lastSwapBlock[poolId][sender] == block.number) revert SameBlockSwap();
             _lastSwapBlock[poolId][sender] = block.number;
         }
@@ -224,7 +220,7 @@ contract SparkGoHookInfinity {
         return (this.beforeSwap.selector, int256(0), 0);
     }
 
-    function afterSwap(address sender, InfinityPoolKey calldata key, InfinitySwapParams calldata params, int256 delta, bytes calldata)
+    function afterSwap(address, InfinityPoolKey calldata key, InfinitySwapParams calldata params, int256 delta, bytes calldata)
         external returns (bytes4, int128)
     {
         if (msg.sender != clPoolManager) revert NotPoolManager();
@@ -237,16 +233,6 @@ contract SparkGoHookInfinity {
         (int128 tokenDelta, int128 quoteDelta) = info.tokenIsCurrency0
             ? (amount0Delta, amount1Delta)
             : (amount1Delta, amount0Delta);
-
-        if (block.number < info.launchBlock + MAX_TX_BLOCKS) {
-            if (tokenDelta > 0) {
-                uint256 boughtAmt = uint256(uint128(tokenDelta));
-                if (boughtAmt > MAX_BUY_AMOUNT) revert MaxBuyExceeded();
-                uint256 newTotal = _boughtInWindow[poolId][sender] + boughtAmt;
-                if (newTotal > MAX_BUY_AMOUNT) revert MaxWalletExceeded();
-                _boughtInWindow[poolId][sender] = newTotal;
-            }
-        }
 
         bool isExactInputSell = tokenDelta < 0 && params.amountSpecified < 0;
         if (!isExactInputSell || quoteDelta <= 0) return (this.afterSwap.selector, int128(0));

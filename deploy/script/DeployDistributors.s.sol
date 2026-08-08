@@ -3,12 +3,10 @@ pragma solidity ^0.8.32;
 
 // 1MEME Spark — 1coin.meme
 //
-// Deploys the two independent distributor utilities — no relation to any
-// Spark launcher, and no chain-specific addresses needed, so this one script
-// runs unchanged on any chain. MultiSender is plain and stateless (no init).
-// MerkleDistributor is UUPS-upgradeable behind a proxy, initialized with an
-// unset feeWallet (defaults to owner) and the same vanity campaignFee used
-// as launchFee across every Spark launcher.
+// Deploys the two distributor utilities — no chain-specific addresses, so
+// this script runs unchanged on any chain. MultiSender is plain/stateless.
+// MerkleDistributor is UUPS-upgradeable, initialized with an unset feeWallet
+// (defaults to owner) and the same campaignFee used as launchFee elsewhere.
 
 import {Script, console2} from "forge-std/Script.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

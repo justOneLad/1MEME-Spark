@@ -14,13 +14,13 @@ contract SparkToken {
     error InvalidSignature();
     error MaxWalletExceeded();
 
-    uint256 public constant TOTAL_SUPPLY  = 1_000_000_000e18;
-    uint256 public constant MAX_TX_BLOCKS = 20_000;
-    uint256 public constant MAX_WALLET    = TOTAL_SUPPLY / 50;
+    uint256 public constant TOTAL_SUPPLY     = 1_000_000_000e18;
+    uint256 public constant ANTIBOT_DURATION = 30 minutes;
+    uint256 public constant MAX_WALLET       = TOTAL_SUPPLY * 3 / 100;
 
     bool    private _initialized;
     address private _owner;
-    uint256 public  launchBlock;
+    uint256 public  launchTimestamp;
 
     mapping(address => bool) public isExempt;
     event ExemptSet(address indexed account, bool exempt);
@@ -69,7 +69,7 @@ contract SparkToken {
         _balances[launcher_] = supply;
         emit Transfer(address(0), launcher_, supply);
 
-        launchBlock = block.number;
+        launchTimestamp = block.timestamp;
         isExempt[launcher_] = true;
         emit ExemptSet(launcher_, true);
 
@@ -149,7 +149,7 @@ contract SparkToken {
     }
 
     function _checkLimits(address to, uint256 amount) private view {
-        if (block.number >= launchBlock + MAX_TX_BLOCKS) return;
+        if (block.timestamp >= launchTimestamp + ANTIBOT_DURATION) return;
         if (isExempt[to]) return;
         if (_balances[to] + amount > MAX_WALLET) revert MaxWalletExceeded();
     }

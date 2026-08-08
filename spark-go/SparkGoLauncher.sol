@@ -3,14 +3,9 @@ pragma solidity ^0.8.32;
 
 // 1MEME Spark — 1coin.meme
 //
-// SparkGo — currency-general, hook-gated launcher (Uniswap v4 / PancakeSwap
-// Infinity singleton pools).
-//
-// currency0 is whichever of (quoteToken, token) sorts lower, not hardcoded
-// address(0) — see _computeOneSidedLiquidity and _swapQuoteToToken.
-//
-// State variables below must only ever be appended to in future upgrades,
-// never reordered or removed.
+// SparkGo — currency-general, hook-gated launcher (Uniswap v4 / PancakeSwap Infinity).
+// currency0 = whichever of (quoteToken, token) sorts lower, not hardcoded address(0).
+// Storage below is append-only across upgrades.
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -118,18 +113,18 @@ contract SparkGoLauncher is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
         string  metaURI;
         address feeWallet;
         address positionManager;
-        address quoteToken;                  // address(0) = native BNB, matches today's behavior
+        address quoteToken;                 // address(0) = native
         bytes32 vanitySalt;
-        uint256 minQuoteOut;                 // leg 1 (native -> quoteToken via fallback routes) slippage floor; 0 = no check
-        uint256 minTokensOut;                // leg 2 (quoteToken -> new token) slippage floor; 0 = no check
-        bool    revertOnInstantBuyFailure;    // true = revert whole launch() if instant-buy fails; false = skip + refund
+        uint256 minQuoteOut;                // leg 1 slippage floor; 0 = no check
+        uint256 minTokensOut;                // leg 2 slippage floor; 0 = no check
+        bool    revertOnInstantBuyFailure;   // false = skip + refund instead of reverting
     }
 
     mapping(address => DexConfig)  public dexes;
     mapping(address => address)    public tokenHook;
     mapping(address => QuoteToken) public quoteTokens;
 
-    address      public weth; // used only to wrap native for V3_STYLE/V2_STYLE fallback routes (see _weth())
+    address      public weth; // wraps native for fallback routes
     address      public tokenImpl;
     ISparkLocker public locker;
     address      public launchFeeWallet;
@@ -157,6 +152,7 @@ contract SparkGoLauncher is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
     event ETHRescued(address indexed to, uint256 amount);
     event ERC20Rescued(address indexed token, address indexed to, uint256 amount);
     event InstantBuySkipped(address indexed token, uint256 refundedWei);
+    event TokenImplSet(address indexed tokenImpl);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -221,6 +217,12 @@ contract SparkGoLauncher is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
     function setLaunchFeeWallet(address wallet) external onlyOwner {
         launchFeeWallet = wallet;
         emit LaunchFeeWalletSet(wallet);
+    }
+
+    function setTokenImpl(address tokenImpl_) external onlyOwner {
+        if (tokenImpl_ == address(0)) revert ZeroAddress();
+        tokenImpl = tokenImpl_;
+        emit TokenImplSet(tokenImpl_);
     }
 
     function _launchFeeRecipient() private view returns (address) {

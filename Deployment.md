@@ -1,12 +1,16 @@
 # Spark — Mainnet Deployments
 
-Two independent, UUPS-upgradeable launcher families are live on both BSC and
-Ethereum mainnet: **SparkLauncher** (plain Uniswap V3 / PancakeSwap V3 pools)
-and **SparkGo** (hook-gated Uniswap v4 / PancakeSwap Infinity singleton
-pools). Both share a bounded-fallback instant-buy routing engine
+Three independent, UUPS-upgradeable launcher families are live on both BSC
+and Ethereum mainnet: **SparkLauncher** (plain Uniswap V3 / PancakeSwap V3
+pools), **SparkGo** (hook-gated Uniswap v4 / PancakeSwap Infinity singleton
+pools), and **SparkCF** (permissionless crowdfund launcher — a token only
+launches once a public raise funds its own liquidity). SparkLauncher and
+SparkGo share a bounded-fallback instant-buy routing engine
 (`common/SparkRouting.sol`) that supports arbitrary quote tokens and can
-chain hops across different DEXs in a single route. All contracts below are
-verified on the relevant explorer, proxies linked to their implementations.
+chain hops across different DEXs in a single route; SparkCF inherits the same
+engine for its optional DEX-quote-asset swap at finalize. All contracts below
+are verified on the relevant explorer, proxies linked to their
+implementations.
 
 Every platform/CTO/campaign fee wallet across both chains (`SparkLocker`
 platform + CTO fees, SparkGo hook platform + CTO fees, `MerkleDistributor`

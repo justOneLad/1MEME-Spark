@@ -11,10 +11,12 @@ allow_paths = ["../"]
 remappings = [
   "spark-contracts/=../spark/",
   "spark-go-contracts/=../spark-go/",
+  "spark-cf-contracts/=../spark-cf/",
   "common-contracts/=../common/",
   "distributor-contracts/=../distributor/",
   "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
   "@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/",
+  "@uniswap/v3-core/=lib/v3-core/",
 ]
 
 [rpc_endpoints]

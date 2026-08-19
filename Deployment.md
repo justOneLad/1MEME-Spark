@@ -56,6 +56,25 @@ launchers is separate and unset (defaults to `owner`).
 - Quote tokens/routes: same set and values as SparkLauncher above (including 1COIN), native BNB (`address(0)`, `marketCapRef` `3.373e18`, ≈$2,000)
 - Hooks enforce same-block re-entry protection only (no buy-size cap) during the 30-minute antibot window; `SparkToken`'s 3% max-wallet is the only size cap
 
+### SparkCF
+
+| Contract | Address |
+|---|---|
+| `SparkCFToken` (implementation) | [`0xcf3cb96eF54c4173e9C4755526683e0D1f1b1B25`](https://bscscan.com/address/0xcf3cb96eF54c4173e9C4755526683e0D1f1b1B25#code) |
+| `SparkLocker` (SparkCF's) | [`0x8955C8bA592617197Aa2adD1D672Ad775C3D50e3`](https://bscscan.com/address/0x8955C8bA592617197Aa2adD1D672Ad775C3D50e3#code) |
+| `FullMath` (library) | [`0xBbC07d098677E02F67cB278946C461468DCdF87F`](https://bscscan.com/address/0xBbC07d098677E02F67cB278946C461468DCdF87F#code) |
+| `TickMath` (library) | [`0x9B89c82473583324Ff357d673a6C0a079C020441`](https://bscscan.com/address/0x9B89c82473583324Ff357d673a6C0a079C020441#code) |
+| `CFTwapMath` (library) | [`0xB2A5b2ABC53B9B5EBF45FcE3247c4AB382ec0b85`](https://bscscan.com/address/0xB2A5b2ABC53B9B5EBF45FcE3247c4AB382ec0b85#code) |
+| Implementation | [`0x5Fb3755D9F368e0653CB5a4457A3091399fd59E8`](https://bscscan.com/address/0x5Fb3755D9F368e0653CB5a4457A3091399fd59E8#code) |
+| **Proxy — use this address** | [`0xCe53c97A672B10031af9864f7960656124AC7a95`](https://bscscan.com/address/0xCe53c97A672B10031af9864f7960656124AC7a95#code) |
+
+- `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
+- Crowdfund, contributions native BNB only. Goal is a TWAP-priced USD target (`usdGoalTarget18`, default `$3000`, owner-settable), fixed `campaignDuration` (`7200s` / 2h) from an instant-live or scheduled start time — no cap, deadline-gated finalize only
+- DEXs: `taxBps == 0` → PancakeSwap V3 (Factory `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865`, PositionManager `0x46A15B0b27311cedF172AB29E4f4766fbE7F4364`), two-sided full-range LP registered with the dedicated `SparkLocker` above; `taxBps > 0` → PancakeSwap V2 (Router `0x10ED43C718714eb63d5aA57B78B54704E256024E`), LP burned
+- `campaignFee`: `0.001111 ether`
+- TWAP goal sources (averaged if both set): V3 pool `0x172fcD41E0913e95784454622d1c3724f546f849` (WBNB/USDT), V2 pair `0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE` (WBNB/USDT), both `1800s` window
+- `dexQuoteAsset` swap-at-finalize routes: same set/shapes as SparkLauncher above (WBNB/USDT/USDC/USD1/AAPLB/NVDAB/TSLAB/SPCXB/1COIN)
+
 ### External BSC dependencies
 
 | Protocol | Contract | Address |
@@ -138,6 +157,26 @@ of BSC — and **Ethereum's USDT/USDC use 6 decimals**, not BSC's 18, so
 - `launchFee`: `0.001111 ether`, `burner`: `SparkGoBurner` above
 - Quote tokens/routes: same set and values as SparkLauncher above, plus native ETH (`address(0)`, `marketCapRef` `5e18`)
 - Hook enforces same-block re-entry protection only (no buy-size cap) during the 30-minute antibot window; `SparkToken`'s 3% max-wallet is the only size cap
+
+### SparkCF
+
+| Contract | Address |
+|---|---|
+| `SparkCFToken` (implementation) | [`0xB8e7F47466276d3208B8f2927DA090530BFAA470`](https://etherscan.io/address/0xB8e7F47466276d3208B8f2927DA090530BFAA470#code) |
+| `SparkLocker` (SparkCF's) | [`0xed9c99C8d06743D5aBFA22541c18Cb09eeEb9ecA`](https://etherscan.io/address/0xed9c99C8d06743D5aBFA22541c18Cb09eeEb9ecA#code) |
+| `FullMath` (library) | [`0xBbC07d098677E02F67cB278946C461468DCdF87F`](https://etherscan.io/address/0xBbC07d098677E02F67cB278946C461468DCdF87F#code) |
+| `TickMath` (library) | [`0x9B89c82473583324Ff357d673a6C0a079C020441`](https://etherscan.io/address/0x9B89c82473583324Ff357d673a6C0a079C020441#code) |
+| `CFTwapMath` (library) | [`0xB2A5b2ABC53B9B5EBF45FcE3247c4AB382ec0b85`](https://etherscan.io/address/0xB2A5b2ABC53B9B5EBF45FcE3247c4AB382ec0b85#code) |
+| Implementation | [`0x225648f06e030a68Bf980761bAD9f19d745b78Aa`](https://etherscan.io/address/0x225648f06e030a68Bf980761bAD9f19d745b78Aa#code) |
+| **Proxy — use this address** | [`0x10176E4F7A68B66a6aCeb604dCadbcc63CbE6ABB`](https://etherscan.io/address/0x10176E4F7A68B66a6aCeb604dCadbcc63CbE6ABB#code) |
+
+- `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
+- Crowdfund, contributions native ETH only. Goal is a TWAP-priced USD target (`usdGoalTarget18`, default `$3000`, owner-settable), fixed `campaignDuration` (`7200s` / 2h) from an instant-live or scheduled start time — no cap, deadline-gated finalize only
+- DEXs: `taxBps == 0` → Uniswap V3 (Factory `0x1F98431c8aD98523631AE4a59f267346ea31F984`, PositionManager `0xC36442b4a4522E871399CD717aBDD847Ab11FE88`), two-sided full-range LP registered with the dedicated `SparkLocker` above; `taxBps > 0` → Uniswap V2 (Router `0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D`), LP burned
+- `campaignFee`: `0.001111 ether`
+- TWAP goal sources (averaged if both set): V3 pool `0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640` (WETH/USDC, fee 0.05%), V2 pair `0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc` (WETH/USDC), both `1800s` window
+- `dexQuoteAsset` swap-at-finalize routes: same set/shapes as SparkLauncher above (WETH/USDT/USDC/AAPL/NVDA/TSLA/SPCX)
+- Same libraries and identical `FullMath`/`TickMath`/`CFTwapMath` addresses as BSC — deployed via the deterministic CREATE2 factory, so they landed at the same address on both chains
 
 ### External Ethereum dependencies
 

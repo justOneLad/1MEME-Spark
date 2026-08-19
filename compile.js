@@ -39,6 +39,8 @@ const ENTRY_FILES = [
   'spark-go/SparkGoBurner.sol',
   'spark-go/hooks/SparkGoHookV4.sol',
   'spark-go/hooks/SparkGoHookInfinity.sol',
+  'spark-cf/SparkCFToken.sol',
+  'spark-cf/SparkCFLauncher.sol',
   'distributor/MultiSender.sol',
   'distributor/MerkleDistributor.sol',
 ];
@@ -58,10 +60,29 @@ for (const f of ENTRY_FILES) {
 if (missing) process.exit(1);
 
 // ── Import resolution ────────────────────────────────────────────────────────
+// Some contracts (e.g. spark-cf/*.sol, for Foundry's externally-linked-library
+// resolution — see CFTwapMath/TickMath/FullMath) use the same remapping
+// aliases deploy/foundry.toml defines, rather than plain relative imports.
+// Kept in sync with that file by hand; nothing auto-generates this.
+const REMAPPINGS = {
+  'spark-contracts/': 'spark/',
+  'spark-go-contracts/': 'spark-go/',
+  'spark-cf-contracts/': 'spark-cf/',
+  'common-contracts/': 'common/',
+  'distributor-contracts/': 'distributor/',
+};
+
 function findImports(importPath) {
+  let resolved = importPath;
+  for (const [alias, real] of Object.entries(REMAPPINGS)) {
+    if (importPath.startsWith(alias)) {
+      resolved = real + importPath.slice(alias.length);
+      break;
+    }
+  }
   const abs = importPath.startsWith('@openzeppelin/')
     ? path.join(NODE_MODULES, importPath)
-    : path.join(__dirname, importPath);
+    : path.join(__dirname, resolved);
   try {
     return { contents: fs.readFileSync(abs, 'utf8') };
   } catch {

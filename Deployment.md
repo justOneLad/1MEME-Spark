@@ -40,7 +40,7 @@ launchers is separate and unset (defaults to `owner`).
 - `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
 - DEXs: PancakeSwap V3 (Factory `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865`, SmartRouter `0x13f4EA83D0bd40E75C8222255bc855a974568Dd4`) and Uniswap V3 (Factory `0xdB1d10011AD0Ff90774D0C6Bb92e5C5c8b4461F7`, SwapRouter02 `0xB971eF87ede563556b2ED4b1C0b0019111Dd85d2`), both `routerNoDeadline: true`
 - `launchFee`: `0.001111 ether`
-- Quote tokens (`marketCapRef`, all 18-decimal): WBNB `3.373e18` (≈$2,000) · USDT/USDC/USD1 `2000e18` each · AAPLB `6.395e18` · NVDAB `8.956e18` · TSLAB `6.071e18` · SPCXB `14.986e18` (all ≈$2,000 launch market cap, Binance bStocks) · 1COIN (`0xe43eF1fE041Ba9E8da87E8C5bFD583B3b46A1111`) `0.0653e18` (≈$1,500)
+- Quote tokens (`marketCapRef`, all 18-decimal, ≈$1,000 launch market cap each, computed from live pool prices): WBNB `1.4305e18` · USDT/USDC/USD1 `1000e18` each · AAPLB `3.1835e18` · NVDAB `4.8356e18` · TSLAB `2.8894e18` · SPCXB `7.1909e18` (Binance bStocks) · 1COIN (`0xe43eF1fE041Ba9E8da87E8C5bFD583B3b46A1111`) `0.04959e18`
 - Routes: single-hop PancakeSwap for stables, two-route fallback (PancakeSwap V3 primary, Uniswap V3 fallback) for AAPLB/NVDAB/SPCXB, PancakeSwap-only for TSLAB (no Uniswap liquidity), single-hop PancakeSwap V2 for 1COIN (its only liquidity — a thin pool, since 1COIN's total supply is 1 token; instant-buy through it hits slippage limits fast)
 
 ### SparkGo
@@ -57,7 +57,7 @@ launchers is separate and unset (defaults to `owner`).
 - `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
 - DEXs: Uniswap v4 → `SparkGoHookV4`, PancakeSwap Infinity → `SparkGoHookInfinity`
 - `launchFee`: `0.001111 ether`, `burner`: `SparkGoBurner` above
-- Quote tokens/routes: same set and values as SparkLauncher above (including 1COIN), native BNB (`address(0)`, `marketCapRef` `3.373e18`, ≈$2,000)
+- Quote tokens/routes: same set and values as SparkLauncher above except WBNB itself isn't registered — only native BNB (`address(0)`, `marketCapRef` `1.4305e18`, ≈$1,000)
 - Hooks enforce same-block re-entry protection only (no buy-size cap) during the 30-minute antibot window; `SparkToken`'s 3% max-wallet is the only size cap
 
 ### SparkCF
@@ -73,7 +73,7 @@ launchers is separate and unset (defaults to `owner`).
 | **Proxy — use this address** | [`0xCe53c97A672B10031af9864f7960656124AC7a95`](https://bscscan.com/address/0xCe53c97A672B10031af9864f7960656124AC7a95#code) |
 
 - `owner`: `0x46cfAd847B0e630d65C01EcdA684ff2326b9f71F`
-- Crowdfund, contributions native BNB only. Goal is a TWAP-priced USD target (`usdGoalTarget18`, default `$3000`, owner-settable), fixed `campaignDuration` (`7200s` / 2h) from an instant-live or scheduled start time — no cap, deadline-gated finalize only
+- Crowdfund, contributions native BNB only. Goal is a TWAP-priced USD target (`usdGoalTarget18`, currently `$1000`, owner-settable), fixed `campaignDuration` (`7200s` / 2h) from an instant-live or scheduled start time — no cap, deadline-gated finalize only
 - DEXs: `taxBps == 0` → PancakeSwap V3 (Factory `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865`, PositionManager `0x46A15B0b27311cedF172AB29E4f4766fbE7F4364`), two-sided full-range LP registered with the dedicated `SparkLocker` above; `taxBps > 0` → PancakeSwap V2 (Router `0x10ED43C718714eb63d5aA57B78B54704E256024E`), LP burned
 - `campaignFee`: `0.001111 ether`
 - TWAP goal sources (averaged if both set): V3 pool `0x172fcD41E0913e95784454622d1c3724f546f849` (WBNB/USDT), V2 pair `0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE` (WBNB/USDT), both `1800s` window
